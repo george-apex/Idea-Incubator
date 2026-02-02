@@ -1,0 +1,16 @@
+{
+  "name": "idea-incubator",
+  "version": "1.0.0",
+  "description": "A browser-first Idea Incubator with a calm pastel bubble UI",
+  "main": "public/index.html",
+  "scripts": {
+    "start": "npx serve public -p 8080",
+    "dev": "npx serve public -p 8080"
+  },
+  "keywords": ["ideas", "productivity", "pwa"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.0"
+  }
+}

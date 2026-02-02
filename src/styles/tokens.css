@@ -1,0 +1,29 @@
+:root {
+  --color-bg: #F6EFE6;
+  --color-surface: #F1E2D1;
+  --color-bubble-primary: #F2C6A0;
+  --color-bubble-secondary: #E7B8A8;
+  --color-bubble-tertiary: #DDB7A3;
+  --color-text-primary: #2B2622;
+  --color-text-secondary: #5C5149;
+  --color-outline: rgba(43, 38, 34, 0.12);
+  --color-accent-blue: #5AA6C8;
+  --color-accent-purple: #8A6FB5;
+  --color-danger: #B85C5C;
+
+  --font-heading: "Fraunces", "Alegreya", "Literata", serif;
+  --font-body: "Nunito", "Inter", system-ui, -apple-system, sans-serif;
+
+  --bubble-radius: 26px 18px 30px 22px;
+  --bubble-shadow: 0 10px 25px rgba(43, 38, 34, 0.10);
+  --bubble-gradient: linear-gradient(145deg, rgba(255, 255, 255, 0.35), rgba(0, 0, 0, 0.03));
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}

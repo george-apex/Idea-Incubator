@@ -1,0 +1,146 @@
+.bubble-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.canvas-container {
+  position: absolute;
+  transform-origin: 0 0;
+  transition: transform 0.1s ease-out;
+}
+
+.idea-bubble {
+  position: absolute;
+  min-width: 180px;
+  max-width: 280px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.idea-bubble:hover {
+  transform: scale(1.05);
+  box-shadow: 0 15px 35px rgba(43, 38, 34, 0.15);
+  z-index: 10;
+}
+
+.idea-bubble.dragging {
+  cursor: grabbing;
+  z-index: 100;
+  transform: scale(1.08);
+}
+
+.idea-bubble-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.idea-bubble-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.idea-bubble-quick-actions {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.idea-bubble:hover .idea-bubble-quick-actions {
+  opacity: 1;
+}
+
+.quick-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+
+.quick-action-btn:hover {
+  background: var(--color-accent-blue);
+  color: white;
+  border-color: var(--color-accent-blue);
+}
+
+.merged-bubble {
+  background: linear-gradient(90deg, var(--color-bubble-primary) 50%, var(--color-bubble-secondary) 50%);
+}
+
+.merged-badge {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-text-primary);
+  color: var(--color-bg);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.canvas-controls {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: var(--color-surface);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: var(--bubble-shadow);
+}
+
+.canvas-control-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  border: 1px solid var(--color-outline);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all var(--transition-fast);
+}
+
+.canvas-control-btn:hover {
+  background: var(--color-accent-blue);
+  color: white;
+  border-color: var(--color-accent-blue);
+}
+
+.canvas-zoom-level {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 60px;
+  justify-content: center;
+}
