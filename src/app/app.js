@@ -186,6 +186,13 @@ function showSettingsDialog() {
         </div>
         
         <div style="margin-bottom: 16px;">
+          <label for="setting-glassy" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
+            <span style="font-size: 14px; font-weight: 500;">Glassy Aesthetic</span>
+          </label>
+        </div>
+        
+        <div style="margin-bottom: 16px;">
           <label for="setting-cadence" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Default Review Cadence (days)</label>
           <input type="number" id="setting-cadence" value="${appState.settings.defaultReviewCadence}" min="1" max="365" style="width: 100%;">
         </div>
@@ -206,6 +213,7 @@ function showSettingsDialog() {
     const newSettings = {
       themeIntensity: document.getElementById('setting-theme').value,
       bubbleFloat: document.getElementById('setting-float').checked,
+      glassyAesthetic: document.getElementById('setting-glassy').checked,
       defaultReviewCadence: parseInt(document.getElementById('setting-cadence').value)
     };
     
@@ -238,7 +246,16 @@ function updateDueCounter() {
   }
 }
 
+function applyGlassyMode() {
+  if (appState.settings.glassyAesthetic) {
+    document.body.classList.add('glassy-mode');
+  } else {
+    document.body.classList.remove('glassy-mode');
+  }
+}
+
 function render() {
+  applyGlassyMode();
   renderSidebar(appState);
   
   const mainPanel = document.getElementById('main-panel');

@@ -16,7 +16,8 @@ class AppState {
       themeIntensity: 'normal',
       bubbleFloat: true,
       defaultReviewCadence: 14,
-      customStatuses: []
+      customStatuses: [],
+      glassyAesthetic: false
     };
     this.listeners = [];
   }

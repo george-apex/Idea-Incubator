@@ -6,14 +6,29 @@ export function renderIdeaDetail(state) {
 
   const idea = state.getSelectedIdea();
   if (!idea) {
+    const currentView = state.currentView || 'canvas';
     container.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-secondary);">
-        <div style="text-align: center;">
-          <h2 style="margin-bottom: 16px;">No idea selected</h2>
-          <p>Select an idea from the sidebar or create a new one</p>
+      <div class="panel-header">
+        <div class="panel-tabs">
+          <button class="panel-tab ${currentView === 'detail' ? 'active' : ''}" data-view="detail">Detail</button>
+          <button class="panel-tab ${currentView === 'canvas' ? 'active' : ''}" data-view="canvas">Canvas</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-secondary);">
+          <div style="text-align: center;">
+            <h2 style="margin-bottom: 16px;">No idea selected</h2>
+            <p>Select an idea from the sidebar or create a new one</p>
+          </div>
         </div>
       </div>
     `;
+    document.querySelectorAll('.panel-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const view = tab.dataset.view;
+        state.setCurrentView(view);
+      });
+    });
     return;
   }
 
