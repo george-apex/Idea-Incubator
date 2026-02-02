@@ -170,7 +170,7 @@ function showSettingsDialog() {
         <h2 style="margin-bottom: 16px;">Settings</h2>
         
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Theme Intensity</label>
+          <label for="setting-theme" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Theme Intensity</label>
           <select id="setting-theme" style="width: 100%;">
             <option value="calm" ${appState.settings.themeIntensity === 'calm' ? 'selected' : ''}>Calm</option>
             <option value="normal" ${appState.settings.themeIntensity === 'normal' ? 'selected' : ''}>Normal</option>
@@ -179,7 +179,7 @@ function showSettingsDialog() {
         </div>
         
         <div style="margin-bottom: 16px;">
-          <label style="display: flex; align-items: center; gap: 8px;">
+          <label for="setting-float" style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
             <span style="font-size: 14px; font-weight: 500;">Bubble Float Animation</span>
           </label>

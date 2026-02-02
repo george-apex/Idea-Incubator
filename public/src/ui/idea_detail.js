@@ -54,24 +54,24 @@ function renderOverviewSection(idea, statuses, categories, colorVariants) {
       </div>
       <div class="detail-section-content">
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Title</label>
+          <label for="idea-title" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Title</label>
           <input class="inline-edit" id="idea-title" value="${escapeHtml(idea.title)}" placeholder="Idea title...">
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Summary</label>
+          <label for="idea-summary" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Summary</label>
           <textarea class="inline-edit textarea" id="idea-summary" placeholder="Brief summary...">${escapeHtml(idea.summary)}</textarea>
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Problem</label>
+          <label for="idea-problem" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Problem</label>
           <textarea class="inline-edit textarea" id="idea-problem" placeholder="What problem does this solve?">${escapeHtml(idea.problem)}</textarea>
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Why Interesting</label>
+          <label for="idea-why" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Why Interesting</label>
           <textarea class="inline-edit textarea" id="idea-why" placeholder="Why is this interesting?">${escapeHtml(idea.why_interesting)}</textarea>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
           <div>
-            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Status</label>
+            <label for="idea-status" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Status</label>
             <select class="inline-edit" id="idea-status">
               ${statuses.map(status => `
                 <option value="${status}" ${idea.status === status ? 'selected' : ''}>${status}</option>
@@ -79,7 +79,7 @@ function renderOverviewSection(idea, statuses, categories, colorVariants) {
             </select>
           </div>
           <div>
-            <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Category</label>
+            <label for="idea-category" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Category</label>
             <input class="inline-edit" id="idea-category" value="${escapeHtml(idea.category)}" placeholder="Category..." list="categories">
             <datalist id="categories">
               ${categories.map(cat => `<option value="${escapeHtml(cat)}">`).join('')}
@@ -87,11 +87,11 @@ function renderOverviewSection(idea, statuses, categories, colorVariants) {
           </div>
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Tags</label>
+          <label for="idea-tags" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Tags</label>
           <input class="inline-edit" id="idea-tags" value="${escapeHtml(idea.tags.join(', '))}" placeholder="tag1, tag2, tag3...">
         </div>
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Color Variant</label>
+          <label for="idea-color" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Color Variant</label>
           <select class="inline-edit" id="idea-color">
             ${colorVariants.map(variant => `
               <option value="${variant}" ${idea.color_variant === variant ? 'selected' : ''}>${variant}</option>
@@ -225,7 +225,7 @@ function renderLinksSection(idea, state) {
       </div>
       <div class="detail-section-content">
         <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Link Idea</label>
+          <label for="link-idea-select" style="display: block; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px;">Link Idea</label>
           <select id="link-idea-select" style="width: 100%;">
             <option value="">Select an idea to link...</option>
             ${otherIdeas.map(i => `<option value="${i.id}">${escapeHtml(i.title || 'Untitled')}</option>`).join('')}

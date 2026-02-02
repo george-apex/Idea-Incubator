@@ -133,7 +133,7 @@ export function showImportDialog(data, onImport) {
         ` : ''}
         
         <div style="margin-bottom: 24px;">
-          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Conflict Resolution</label>
+          <label for="conflict-resolution" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Conflict Resolution</label>
           <select id="conflict-resolution" style="width: 100%;">
             <option value="skip">Skip conflicting ideas</option>
             <option value="overwrite">Overwrite existing ideas</option>

@@ -27,12 +27,12 @@ export function showReviewModal(idea, onSubmit, onSnooze, onArchive) {
           </div>
           
           <div style="margin-bottom: 24px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Notes (optional)</label>
+            <label for="review-notes" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Notes (optional)</label>
             <textarea id="review-notes" class="inline-edit textarea" placeholder="Any additional thoughts..." style="width: 100%;"></textarea>
           </div>
           
           <div style="margin-bottom: 24px;">
-            <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Update Status (optional)</label>
+            <label for="review-status" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Update Status (optional)</label>
             <select id="review-status" style="width: 100%;">
               <option value="">Keep current status</option>
               <option value="Incubating">Incubating</option>
@@ -70,8 +70,8 @@ function renderPrompt(prompt) {
   if (prompt.type === 'choice') {
     return `
       <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">${escapeHtml(prompt.text)}</label>
-        <select name="prompt_${prompt.id}" required style="width: 100%;">
+        <label for="prompt_${prompt.id}" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">${escapeHtml(prompt.text)}</label>
+        <select id="prompt_${prompt.id}" name="prompt_${prompt.id}" required style="width: 100%;">
           <option value="">Select an option...</option>
           ${prompt.options.map(opt => `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`).join('')}
         </select>
@@ -80,8 +80,8 @@ function renderPrompt(prompt) {
   } else {
     return `
       <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">${escapeHtml(prompt.text)}</label>
-        <textarea name="prompt_${prompt.id}" required class="inline-edit textarea" style="width: 100%; min-height: 60px;" placeholder="Your answer..."></textarea>
+        <label for="prompt_${prompt.id}" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">${escapeHtml(prompt.text)}</label>
+        <textarea id="prompt_${prompt.id}" name="prompt_${prompt.id}" required class="inline-edit textarea" style="width: 100%; min-height: 60px;" placeholder="Your answer..."></textarea>
       </div>
     `;
   }

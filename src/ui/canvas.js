@@ -13,7 +13,8 @@ let canvasState = {
   draggedBubble: null,
   bubbleWasMoved: false,
   linkMode: false,
-  linkSourceBubble: null
+  linkSourceBubble: null,
+  selectedLink: null
 };
 
 export function renderCanvas(state) {
@@ -29,14 +30,14 @@ export function renderCanvas(state) {
         <button class="panel-tab active" data-view="canvas">Canvas</button>
       </div>
       <div style="display: flex; gap: 8px;">
-        <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">🔗 Link Mode</button>
+        <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary" id="reset-view">Reset View</button>
       </div>
     </div>
     <div class="panel-content">
       <div class="bubble-canvas" id="bubble-canvas">
         <div class="canvas-container" id="canvas-container">
-          <svg class="connection-lines" id="connection-lines">
+          <svg class="connection-lines" id="connection-lines" style="overflow: visible; position: absolute; top: -5000px; left: -5000px; width: 20000px; height: 20000px;">
             ${renderConnectionLines(ideas)}
           </svg>
           ${ideas.map(idea => renderBubble(idea, state)).join('')}
@@ -51,6 +52,17 @@ export function renderCanvas(state) {
   `;
 
   attachCanvasListeners(state);
+  
+  const canvasContainer = document.getElementById('canvas-container');
+  if (canvasContainer) {
+    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
+  }
+  
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      updateConnectionLines(state);
+    });
+  });
 }
 
 function renderConnectionLines(ideas) {
@@ -76,11 +88,37 @@ function renderConnectionLines(ideas) {
   });
 
   return lines.map(line => {
-    const x1 = line.from.x + 60;
-    const y1 = line.from.y + 40;
-    const x2 = line.to.x + 60;
-    const y2 = line.to.y + 40;
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#d4a574" stroke-width="2" stroke-dasharray="5,5" />`;
+    const fromBubble = document.querySelector(`.idea-bubble[data-id="${line.from.id}"]`);
+    const toBubble = document.querySelector(`.idea-bubble[data-id="${line.to.id}"]`);
+    
+    let x1, y1, x2, y2;
+    
+    if (fromBubble && toBubble) {
+      x1 = fromBubble.offsetLeft + fromBubble.offsetWidth / 2 + 5000;
+      y1 = fromBubble.offsetTop + fromBubble.offsetHeight / 2 + 5000;
+      x2 = toBubble.offsetLeft + toBubble.offsetWidth / 2 + 5000;
+      y2 = toBubble.offsetTop + toBubble.offsetHeight / 2 + 5000;
+    } else {
+      x1 = line.from.x + 130 + 5000;
+      y1 = line.from.y + 80 + 5000;
+      x2 = line.to.x + 130 + 5000;
+      y2 = line.to.y + 80 + 5000;
+    }
+    
+    const linkKey = [line.from.id, line.to.id].sort().join('-');
+    const isSelected = canvasState.selectedLink === linkKey;
+    
+    return `<line 
+      class="connection-line ${isSelected ? 'selected' : ''}" 
+      data-link="${linkKey}"
+      data-from="${line.from.id}"
+      data-to="${line.to.id}"
+      x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+      stroke="#d4a574" 
+      stroke-width="${isSelected ? 4 : 2}" 
+      stroke-dasharray="5,5" 
+      style="cursor: ${canvasState.linkMode ? 'pointer' : 'default'}"
+    />`;
   }).join('');
 }
 
@@ -105,13 +143,15 @@ function updateConnectionLines(state) {
             
             const fromPos = fromBubble ? {
               x: parseFloat(fromBubble.style.left),
-              y: parseFloat(fromBubble.style.top)
-            } : idea.canvas_pos;
+              y: parseFloat(fromBubble.style.top),
+              id: idea.id
+            } : { ...idea.canvas_pos, id: idea.id };
             
             const toPos = toBubble ? {
               x: parseFloat(toBubble.style.left),
-              y: parseFloat(toBubble.style.top)
-            } : linkedIdea.canvas_pos;
+              y: parseFloat(toBubble.style.top),
+              id: linkId
+            } : { ...linkedIdea.canvas_pos, id: linkId };
             
             lines.push({ from: fromPos, to: toPos });
           }
@@ -121,11 +161,37 @@ function updateConnectionLines(state) {
   });
 
   svg.innerHTML = lines.map(line => {
-    const x1 = line.from.x + 60;
-    const y1 = line.from.y + 40;
-    const x2 = line.to.x + 60;
-    const y2 = line.to.y + 40;
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#d4a574" stroke-width="2" stroke-dasharray="5,5" />`;
+    const fromBubble = document.querySelector(`.idea-bubble[data-id="${line.from.id}"]`);
+    const toBubble = document.querySelector(`.idea-bubble[data-id="${line.to.id}"]`);
+    
+    let x1, y1, x2, y2;
+    
+    if (fromBubble && toBubble) {
+      x1 = fromBubble.offsetLeft + fromBubble.offsetWidth / 2 + 5000;
+      y1 = fromBubble.offsetTop + fromBubble.offsetHeight / 2 + 5000;
+      x2 = toBubble.offsetLeft + toBubble.offsetWidth / 2 + 5000;
+      y2 = toBubble.offsetTop + toBubble.offsetHeight / 2 + 5000;
+    } else {
+      x1 = line.from.x + 130 + 5000;
+      y1 = line.from.y + 80 + 5000;
+      x2 = line.to.x + 130 + 5000;
+      y2 = line.to.y + 80 + 5000;
+    }
+    
+    const linkKey = [line.from.id, line.to.id].sort().join('-');
+    const isSelected = canvasState.selectedLink === linkKey;
+    
+    return `<line 
+      class="connection-line ${isSelected ? 'selected' : ''}" 
+      data-link="${linkKey}"
+      data-from="${line.from.id}"
+      data-to="${line.to.id}"
+      x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+      stroke="#d4a574" 
+      stroke-width="${isSelected ? 4 : 2}" 
+      stroke-dasharray="5,5" 
+      style="cursor: ${canvasState.linkMode ? 'pointer' : 'default'}"
+    />`;
   }).join('');
 }
 
@@ -148,8 +214,9 @@ function renderBubble(idea, state) {
       <div class="idea-bubble-meta">
         <span class="status-pill">${escapeHtml(idea.status)}</span>
       </div>
-      <div class="confidence-ring" style="background: conic-gradient(var(--color-accent-blue) ${idea.confidence}%, transparent ${idea.confidence}%);">
-        ${idea.confidence}
+      <div class="confidence-ring" style="--confidence-color: var(--color-bubble-${idea.color_variant}); --confidence-percent: ${idea.confidence}%;">
+        <div class="confidence-ring-progress"></div>
+        <span>${idea.confidence}</span>
       </div>
       ${isMerged ? '<div class="merged-badge">Merged</div>' : ''}
     </div>
@@ -182,8 +249,8 @@ function attachCanvasListeners(state) {
       
       canvasState.isDragging = true;
       canvasState.draggedBubble = bubble;
-      canvasState.dragStartX = e.clientX - canvasState.offsetX - parseFloat(bubble.style.left) * canvasState.scale;
-      canvasState.dragStartY = e.clientY - canvasState.offsetY - parseFloat(bubble.style.top) * canvasState.scale;
+      canvasState.dragStartX = (e.clientX - canvasState.offsetX) / canvasState.scale - parseFloat(bubble.style.left);
+      canvasState.dragStartY = (e.clientY - canvasState.offsetY) / canvasState.scale - parseFloat(bubble.style.top);
       canvasState.bubbleWasMoved = false;
       bubble.classList.add('dragging');
     } else {
@@ -196,8 +263,8 @@ function attachCanvasListeners(state) {
 
   document.addEventListener('mousemove', (e) => {
     if (canvasState.isDragging && canvasState.draggedBubble) {
-      const x = (e.clientX - canvasState.dragStartX) / canvasState.scale;
-      const y = (e.clientY - canvasState.dragStartY) / canvasState.scale;
+      const x = (e.clientX - canvasState.offsetX) / canvasState.scale - canvasState.dragStartX;
+      const y = (e.clientY - canvasState.offsetY) / canvasState.scale - canvasState.dragStartY;
       canvasState.draggedBubble.style.left = x + 'px';
       canvasState.draggedBubble.style.top = y + 'px';
       canvasState.bubbleWasMoved = true;
@@ -234,7 +301,7 @@ function attachCanvasListeners(state) {
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    canvasState.scale = Math.max(0.7, Math.min(1.5, canvasState.scale + delta));
+    canvasState.scale = Math.max(0.2, Math.min(1.5, canvasState.scale + delta));
     updateTransform();
   });
 
@@ -253,6 +320,19 @@ function attachCanvasListeners(state) {
 
   canvas.addEventListener('click', async (e) => {
     const bubble = e.target.closest('.idea-bubble');
+    const connectionLine = e.target.closest('.connection-line');
+    
+    if (connectionLine && canvasState.linkMode) {
+      const linkKey = connectionLine.dataset.link;
+      if (canvasState.selectedLink === linkKey) {
+        canvasState.selectedLink = null;
+      } else {
+        canvasState.selectedLink = linkKey;
+      }
+      updateConnectionLines(state);
+      return;
+    }
+    
     if (bubble) {
       const actionBtn = e.target.closest('.quick-action-btn');
       if (actionBtn) {
@@ -316,7 +396,7 @@ function attachCanvasListeners(state) {
 
   if (zoomOutBtn) {
     zoomOutBtn.addEventListener('click', () => {
-      canvasState.scale = Math.max(0.7, canvasState.scale - 0.1);
+      canvasState.scale = Math.max(0.2, canvasState.scale - 0.1);
       updateTransform();
     });
   }
@@ -337,12 +417,33 @@ function attachCanvasListeners(state) {
       linkModeBtn.classList.toggle('active', canvasState.linkMode);
       canvas.style.cursor = canvasState.linkMode ? 'crosshair' : '';
       
-      if (!canvasState.linkMode && canvasState.linkSourceBubble) {
-        canvasState.linkSourceBubble.classList.remove('link-source');
-        canvasState.linkSourceBubble = null;
+      if (!canvasState.linkMode) {
+        if (canvasState.linkSourceBubble) {
+          canvasState.linkSourceBubble.classList.remove('link-source');
+          canvasState.linkSourceBubble = null;
+        }
+        canvasState.selectedLink = null;
+        updateConnectionLines(state);
       }
     });
   }
+  
+  document.addEventListener('keydown', async (e) => {
+    if (canvasState.linkMode && canvasState.selectedLink && (e.key === 'Delete' || e.key === 'Backspace')) {
+      const [fromId, toId] = canvasState.selectedLink.split('-');
+      const fromIdea = state.ideas.find(i => i.id === fromId);
+      const toIdea = state.ideas.find(i => i.id === toId);
+      
+      if (fromIdea && toIdea) {
+        fromIdea.links = fromIdea.links.filter(id => id !== toId);
+        toIdea.links = toIdea.links.filter(id => id !== fromId);
+        await state.updateIdea(fromIdea);
+        await state.updateIdea(toIdea);
+        canvasState.selectedLink = null;
+        updateConnectionLines(state);
+      }
+    }
+  });
 
   document.querySelectorAll('.panel-tab').forEach(tab => {
     tab.addEventListener('click', () => {
