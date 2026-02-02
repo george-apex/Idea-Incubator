@@ -14,7 +14,9 @@ let canvasState = {
   bubbleWasMoved: false,
   linkMode: false,
   linkSourceBubble: null,
-  selectedLink: null
+  selectedLink: null,
+  mergeMode: false,
+  mergeSourceBubble: null
 };
 
 export function renderCanvas(state) {
@@ -31,6 +33,7 @@ export function renderCanvas(state) {
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
+        <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
         <button class="secondary" id="reset-view">Reset View</button>
       </div>
     </div>
@@ -369,6 +372,22 @@ function attachCanvasListeners(state) {
             canvasState.linkSourceBubble.classList.remove('link-source');
             canvasState.linkSourceBubble = null;
           }
+        } else if (canvasState.mergeMode) {
+          const ideaId = bubble.dataset.id;
+          if (!canvasState.mergeSourceBubble) {
+            canvasState.mergeSourceBubble = bubble;
+            bubble.classList.add('merge-source');
+          } else {
+            const sourceId = canvasState.mergeSourceBubble.dataset.id;
+            const targetId = ideaId;
+            
+            if (sourceId !== targetId) {
+              showMergeDialog(state, sourceId, targetId);
+            }
+            
+            canvasState.mergeSourceBubble.classList.remove('merge-source');
+            canvasState.mergeSourceBubble = null;
+          }
         } else {
           const ideaId = bubble.dataset.id;
           const idea = state.ideas.find(i => i.id === ideaId);
@@ -416,6 +435,16 @@ function attachCanvasListeners(state) {
       linkModeBtn.classList.toggle('active', canvasState.linkMode);
       canvas.style.cursor = canvasState.linkMode ? 'crosshair' : '';
       
+      if (canvasState.linkMode) {
+        canvasState.mergeMode = false;
+        const mergeModeBtn = document.getElementById('merge-mode-btn');
+        if (mergeModeBtn) mergeModeBtn.classList.remove('active');
+        if (canvasState.mergeSourceBubble) {
+          canvasState.mergeSourceBubble.classList.remove('merge-source');
+          canvasState.mergeSourceBubble = null;
+        }
+      }
+      
       if (!canvasState.linkMode) {
         if (canvasState.linkSourceBubble) {
           canvasState.linkSourceBubble.classList.remove('link-source');
@@ -423,6 +452,33 @@ function attachCanvasListeners(state) {
         }
         canvasState.selectedLink = null;
         updateConnectionLines(state);
+      }
+    });
+  }
+
+  const mergeModeBtn = document.getElementById('merge-mode-btn');
+  if (mergeModeBtn) {
+    mergeModeBtn.addEventListener('click', () => {
+      canvasState.mergeMode = !canvasState.mergeMode;
+      mergeModeBtn.classList.toggle('active', canvasState.mergeMode);
+      canvas.style.cursor = canvasState.mergeMode ? 'crosshair' : '';
+      
+      if (canvasState.mergeMode) {
+        canvasState.linkMode = false;
+        linkModeBtn.classList.remove('active');
+        if (canvasState.linkSourceBubble) {
+          canvasState.linkSourceBubble.classList.remove('link-source');
+          canvasState.linkSourceBubble = null;
+        }
+        canvasState.selectedLink = null;
+        updateConnectionLines(state);
+      }
+      
+      if (!canvasState.mergeMode) {
+        if (canvasState.mergeSourceBubble) {
+          canvasState.mergeSourceBubble.classList.remove('merge-source');
+          canvasState.mergeSourceBubble = null;
+        }
       }
     });
   }
@@ -490,6 +546,56 @@ function showLinkDialog(state, ideaId) {
         await state.updateIdea(targetIdea);
       }
     }
+    container.innerHTML = '';
+  });
+}
+
+function showMergeDialog(state, ideaIdA, ideaIdB) {
+  const ideaA = state.ideas.find(i => i.id === ideaIdA);
+  const ideaB = state.ideas.find(i => i.id === ideaIdB);
+  if (!ideaA || !ideaB) return;
+  
+  const container = document.getElementById('modal-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="modal-overlay" id="merge-modal">
+      <div class="modal-content" style="max-width: 500px;">
+        <h2 style="margin-bottom: 16px;">Merge Ideas</h2>
+        <div style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+          <strong>Merging:</strong>
+          <div style="margin-top: 8px;">• ${escapeHtml(ideaA.title || 'Untitled')}</div>
+          <div>• ${escapeHtml(ideaB.title || 'Untitled')}</div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label for="merge-title" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Merged Title</label>
+          <input id="merge-title" value="${escapeHtml(ideaA.title + ' + ' + ideaB.title)}" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-outline);">
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label for="merge-summary" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Merged Summary</label>
+          <textarea id="merge-summary" rows="4" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-outline);">${escapeHtml((ideaA.summary || '') + '\n\n' + (ideaB.summary || ''))}</textarea>
+        </div>
+        <p style="color: var(--color-text-secondary); font-size: 13px; margin-bottom: 16px;">
+          The original ideas will be archived. The merged idea will combine all assumptions, questions, next steps, and tags from both ideas.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="secondary" id="cancel-merge">Cancel</button>
+          <button class="primary" id="confirm-merge">Merge</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('cancel-merge').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+
+  document.getElementById('confirm-merge').addEventListener('click', async () => {
+    const mergedData = {
+      title: document.getElementById('merge-title').value,
+      summary: document.getElementById('merge-summary').value
+    };
+    await state.mergeIdeas(ideaIdA, ideaIdB, mergedData);
     container.innerHTML = '';
   });
 }
