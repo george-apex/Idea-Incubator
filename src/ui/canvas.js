@@ -507,52 +507,6 @@ function attachCanvasListeners(state) {
       updateTransform();
     });
   }
-}
-
-export function autoFitCanvas(state) {
-  const ideas = state.getFilteredIdeas();
-  if (ideas.length === 0) return;
-
-  const canvas = document.getElementById('bubble-canvas');
-  if (!canvas) return;
-
-  const canvasRect = canvas.getBoundingClientRect();
-  
-  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
-  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
-  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
-  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
-
-  const contentWidth = maxX - minX;
-  const contentHeight = maxY - minY;
-  const contentCenterX = minX + contentWidth / 2;
-  const contentCenterY = minY + contentHeight / 2;
-
-  const padding = 100;
-  const scaleX = (canvasRect.width - padding * 2) / contentWidth;
-  const scaleY = (canvasRect.height - padding * 2) / contentHeight;
-  const newScale = Math.min(scaleX, scaleY, 1);
-
-  canvasState.scale = newScale;
-  canvasState.offsetX = canvasRect.width / 2 - contentCenterX * newScale;
-  canvasState.offsetY = canvasRect.height / 2 - contentCenterY * newScale;
-
-  const canvasContainer = document.getElementById('canvas-container');
-  if (canvasContainer) {
-    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
-  }
-
-  const zoomLevel = document.getElementById('zoom-level');
-  if (zoomLevel) {
-    zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
-  }
-}
-
-export function resetCanvasState() {
-  canvasState.scale = 1;
-  canvasState.offsetX = 0;
-  canvasState.offsetY = 0;
-}
 
   const linkModeBtn = document.getElementById('link-mode-btn');
   if (linkModeBtn) {
@@ -1011,4 +965,49 @@ function closeContextMenu() {
     canvasState.contextMenu.remove();
     canvasState.contextMenu = null;
   }
+}
+
+export function autoFitCanvas(state) {
+  const ideas = state.getFilteredIdeas();
+  if (ideas.length === 0) return;
+
+  const canvas = document.getElementById('bubble-canvas');
+  if (!canvas) return;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  
+  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+
+  const contentWidth = maxX - minX;
+  const contentHeight = maxY - minY;
+  const contentCenterX = minX + contentWidth / 2;
+  const contentCenterY = minY + contentHeight / 2;
+
+  const padding = 100;
+  const scaleX = (canvasRect.width - padding * 2) / contentWidth;
+  const scaleY = (canvasRect.height - padding * 2) / contentHeight;
+  const newScale = Math.min(scaleX, scaleY, 1);
+
+  canvasState.scale = newScale;
+  canvasState.offsetX = canvasRect.width / 2 - contentCenterX * newScale;
+  canvasState.offsetY = canvasRect.height / 2 - contentCenterY * newScale;
+
+  const canvasContainer = document.getElementById('canvas-container');
+  if (canvasContainer) {
+    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
+  }
+
+  const zoomLevel = document.getElementById('zoom-level');
+  if (zoomLevel) {
+    zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
+  }
+}
+
+export function resetCanvasState() {
+  canvasState.scale = 1;
+  canvasState.offsetX = 0;
+  canvasState.offsetY = 0;
 }

@@ -157,9 +157,6 @@ export function resetCanvasState() {
   canvasState.offsetY = 0;
 }
 
-  updateMinimap(state);
-}
-
 function renderConnectionLines(ideas) {
   const lines = [];
   const processedLinks = new Set();
