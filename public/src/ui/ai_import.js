@@ -5,7 +5,7 @@ export function showAIImportDialog(state) {
   container.innerHTML = `
     <div class="modal-overlay" id="ai-import-modal">
       <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-        <h2 style="margin-bottom: 16px;">🤖 AI-Powered Idea Import</h2>
+        <h2 style="margin-bottom: 16px;">AI-Powered Idea Import</h2>
         
         <div style="margin-bottom: 20px; padding: 16px; background: rgba(90, 166, 200, 0.1); border-radius: 8px; border-left: 4px solid var(--color-accent-blue);">
           <p style="margin: 0; font-size: 14px; color: var(--color-text-secondary);">
@@ -214,15 +214,12 @@ Example:
         <div class="ai-idea-summary">${escapeHtml(idea.summary || 'No summary')}</div>
         <div class="ai-idea-meta">
           <div class="ai-idea-meta-item">
-            <span>📊</span>
             <span>Confidence: ${idea.confidence || 50}%</span>
           </div>
           <div class="ai-idea-meta-item">
-            <span>📌</span>
             <span>Status: ${idea.status || 'New'}</span>
           </div>
           <div class="ai-idea-meta-item">
-            <span>🎨</span>
             <span>Color: ${idea.color_variant || 'primary'}</span>
           </div>
         </div>

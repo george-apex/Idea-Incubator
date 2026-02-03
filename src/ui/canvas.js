@@ -83,13 +83,13 @@ export function renderCanvas(state) {
           <div class="legend-divider"></div>
           <div class="legend-title">View Controls</div>
           <div class="legend-item">
-            <span>🖱️ Drag to pan</span>
+            <span>Drag to pan</span>
           </div>
           <div class="legend-item">
-            <span>🔍 Scroll to zoom</span>
+            <span>Scroll to zoom</span>
           </div>
           <div class="legend-item">
-            <span>🗺️ Click minimap to navigate</span>
+            <span>Click minimap to navigate</span>
           </div>
         </div>
         <div class="link-legend" id="link-legend" style="display: none;">
@@ -110,13 +110,13 @@ export function renderCanvas(state) {
           <div class="legend-divider"></div>
           <div class="legend-title">View Controls</div>
           <div class="legend-item">
-            <span>🖱️ Drag to pan</span>
+            <span>Drag to pan</span>
           </div>
           <div class="legend-item">
-            <span>🔍 Scroll to zoom</span>
+            <span>Scroll to zoom</span>
           </div>
           <div class="legend-item">
-            <span>🗺️ Click minimap to navigate</span>
+            <span>Click minimap to navigate</span>
           </div>
         </div>
       </div>
@@ -784,26 +784,21 @@ function showContextMenu(e, bubble, idea, state) {
   menu.style.position = 'fixed';
   menu.innerHTML = `
     <div class="context-menu-item" data-action="update">
-      <span class="menu-icon">✎</span>
       <span>Update</span>
     </div>
     <div class="context-menu-item" data-action="links">
-      <span class="menu-icon">🔗</span>
       <span>Manage Links (${linkedIdeas.length})</span>
     </div>
     ${isMerged ? `
       <div class="context-menu-item" data-action="split">
-        <span class="menu-icon">✂️</span>
         <span>Split Idea</span>
       </div>
     ` : ''}
     <div class="context-menu-divider"></div>
     <div class="context-menu-item" data-action="archive">
-      <span class="menu-icon">${idea.is_archived ? '📤' : '📦'}</span>
       <span>${idea.is_archived ? 'Unarchive' : 'Archive'}</span>
     </div>
     <div class="context-menu-item danger" data-action="delete">
-      <span class="menu-icon">🗑️</span>
       <span>Delete</span>
     </div>
   `;
@@ -864,7 +859,6 @@ function showLinksContextMenu(bubble, idea, state) {
         <div class="context-menu-section-title">Linked Ideas</div>
         ${linkedIdeas.map(linked => `
           <div class="context-menu-item linked-item" data-link-id="${linked.id}">
-            <span class="menu-icon">🔗</span>
             <span class="link-title">${escapeHtml(linked.title || 'Untitled')}</span>
             <span class="remove-link" data-remove-id="${linked.id}">×</span>
           </div>
