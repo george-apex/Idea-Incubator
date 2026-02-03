@@ -190,7 +190,7 @@ Example:
       state.setCurrentView('canvas');
       container.innerHTML = '';
       
-      setTimeout(() => {
+      setTimeout(async () => {
         const { autoFitCanvas } = await import('./canvas.js');
         autoFitCanvas(state);
       }, 100);
