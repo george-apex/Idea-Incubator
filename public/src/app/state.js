@@ -20,7 +20,7 @@ class AppState {
       glassyAesthetic: false,
       aiApiKey: '',
       aiProvider: 'tensorix',
-      aiModel: 'gpt-4o-mini'
+      aiModel: 'z-ai/glm-4.7'
     };
     this.listeners = [];
   }
@@ -297,8 +297,10 @@ class AppState {
   async importIdeasFromAI(aiIdeas) {
     const createdIdeas = [];
     const titleToIdMap = {};
+    const positions = this.generateLayoutPositions(aiIdeas);
 
-    for (const aiIdea of aiIdeas) {
+    for (let i = 0; i < aiIdeas.length; i++) {
+      const aiIdea = aiIdeas[i];
       const newIdea = createIdea({
         title: aiIdea.title,
         summary: aiIdea.summary || '',
@@ -306,10 +308,7 @@ class AppState {
         status: aiIdea.status || 'New',
         color_variant: aiIdea.color_variant || 'primary',
         tags: aiIdea.tags || [],
-        canvas_pos: {
-          x: Math.random() * 800 + 100,
-          y: Math.random() * 600 + 100
-        }
+        canvas_pos: positions[i]
       });
 
       await saveIdea(newIdea);
@@ -337,6 +336,96 @@ class AppState {
 
     this.notify();
     return createdIdeas;
+  }
+
+  generateLayoutPositions(ideas) {
+    const count = ideas.length;
+    const bubbleWidth = 260;
+    const bubbleHeight = 160;
+    const horizontalGap = 80;
+    const verticalGap = 120;
+    const canvasWidth = 4000;
+    const canvasHeight = 3000;
+
+    if (count === 0) return [];
+
+    if (count === 1) {
+      return [{ x: canvasWidth / 2 - bubbleWidth / 2, y: 200 }];
+    }
+
+    const positions = new Map();
+    const titleToIndex = new Map();
+    ideas.forEach((idea, index) => {
+      titleToIndex.set(idea.title, index);
+    });
+
+    const getChildren = (parentTitle) => {
+      return ideas.filter(idea => idea.parent === parentTitle);
+    };
+
+    const getRelated = (title) => {
+      return ideas.filter(idea => 
+        idea.related_to && idea.related_to.includes(title)
+      );
+    };
+
+    const layoutTree = (parentTitle, x, y, availableWidth) => {
+      const children = getChildren(parentTitle);
+      const related = getRelated(parentTitle);
+      const allChildren = [...children, ...related];
+
+      if (allChildren.length === 0) return;
+
+      const childWidth = bubbleWidth + horizontalGap;
+      const totalWidth = allChildren.length * childWidth;
+      const startX = x - totalWidth / 2 + childWidth / 2;
+
+      allChildren.forEach((child, index) => {
+        const childX = startX + index * childWidth;
+        const childY = y + bubbleHeight + verticalGap;
+        const childIndex = titleToIndex.get(child.title);
+
+        if (childIndex !== undefined && !positions.has(childIndex)) {
+          positions.set(childIndex, {
+            x: childX - bubbleWidth / 2,
+            y: childY
+          });
+
+          layoutTree(child.title, childX, childY, childWidth);
+        }
+      });
+    };
+
+    const roots = ideas.filter(idea => !idea.parent && (!idea.related_to || idea.related_to.length === 0));
+    const rootSpacing = (canvasWidth - 200) / Math.max(roots.length, 1);
+    const rootStartX = 100 + rootSpacing / 2;
+
+    roots.forEach((root, index) => {
+      const rootX = rootStartX + index * rootSpacing;
+      const rootY = 200;
+      const rootIndex = titleToIndex.get(root.title);
+
+      positions.set(rootIndex, {
+        x: rootX - bubbleWidth / 2,
+        y: rootY
+      });
+
+      layoutTree(root.title, rootX, rootY, rootSpacing);
+    });
+
+    const result = [];
+    for (let i = 0; i < count; i++) {
+      if (positions.has(i)) {
+        result.push(positions.get(i));
+      } else {
+        result.push({
+          x: Math.random() * (canvasWidth - bubbleWidth - 100) + 50,
+          y: Math.random() * (canvasHeight - bubbleHeight - 100) + 50
+        });
+      }
+    }
+
+    return result;
   }
 
   setAIApiKey(apiKey) {

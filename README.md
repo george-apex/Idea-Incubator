@@ -5,6 +5,9 @@ A browser-first Idea Incubator with a calm pastel bubble UI, revisit prompts, an
 ## Features
 
 - **Bubble Canvas**: Spatial overview of ideas with drag, pan, and zoom
+- **Visual Link Types**: Distinct parent-child (solid with arrows) and peer (dashed) connections
+- **Mini-Map**: Navigate large diagrams with click-to-pan minimap
+- **Interactive Legend**: Toggle legend to understand link types and controls
 - **Sidebar List**: Traditional searchable list with filters
 - **Inline Editing**: Click-to-edit everywhere with auto-save
 - **Revisit System**: Mandatory review prompts when ideas are due
@@ -61,6 +64,24 @@ npm start
 - Export as .pideas (re-importable) or Markdown (readable)
 - Import .pideas files to merge ideas
 - Choose conflict resolution strategy
+
+### Test Data
+
+To test the canvas visualization with extensive data:
+1. Open `test-data-import.html` in your browser
+2. Click "Generate and Import Test Data"
+3. This creates 75+ ideas with parent-child and peer relationships
+4. Navigate to the main app to see the complex diagram
+
+### Canvas Controls
+
+- **Drag**: Click and drag empty space to pan
+- **Zoom**: Scroll wheel to zoom in/out (20% - 150%)
+- **Minimap**: Click anywhere on the minimap to jump to that location
+- **Legend**: Click "Legend" button to show/hide link type explanations
+- **Link Types**:
+  - Solid dark lines with arrows: Parent → Child relationships
+  - Dashed lighter lines: Peer connections between related ideas
 
 ## Data Model
 

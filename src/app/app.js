@@ -1,64 +1,28 @@
-console.log('=== APP.JS LOADING ===');
-console.trace('APP.JS TRACE');
-
 import { appState } from './state.js';
-console.log('=== IMPORTED STATE ===');
-
 import { renderSidebar } from '../ui/sidebar.js';
-console.log('=== IMPORTED SIDEBAR ===');
-
 import { renderIdeaDetail } from '../ui/idea_detail.js';
-console.log('=== IMPORTED IDEA_DETAIL ===');
-
 import { renderCanvas } from '../ui/canvas.js';
-console.log('=== IMPORTED CANVAS ===');
-
 import { showReviewModal } from '../ui/review_modal.js';
-console.log('=== IMPORTED REVIEW_MODAL ===');
-
 import { showAIImportDialog } from '../ui/ai_import.js';
-console.log('=== IMPORTED AI_IMPORT ===');
-
 import { exportToPideas, exportToMarkdown, importFromPideas, showImportDialog } from '../utils/export_import.js';
-console.log('=== IMPORTED EXPORT_IMPORT ===');
-
 import { bulkSaveIdeas } from '../db/idb.js';
-console.log('=== IMPORTED BULK_SAVE ===');
-
 import { generateUUID } from '../utils/uuid.js';
-console.log('=== IMPORTED UUID ===');
-
-console.log('=== IMPORTS COMPLETE ===');
-console.log('appState:', appState);
 
 let dueCheckInterval = null;
 
 export async function initApp() {
-  console.log('=== INIT APP START ===');
-  console.log('appState exists?', !!appState);
   await appState.init();
-  console.log('=== APP STATE INITIALIZED ===');
-
-  console.log('DOM ready?', document.readyState);
-  console.log('ai-import-btn exists?', document.getElementById('ai-import-btn'));
-
   setupEventListeners();
   startDueCheck();
-  console.log('=== CALLING RENDER ===');
   render();
-
   appState.subscribe(render);
-  console.log('=== INIT APP COMPLETE ===');
 }
 
-console.log('=== INIT APP FUNCTION DEFINED ===');
-console.log('Calling initApp...');
 initApp().catch(error => {
-  console.error('=== INIT APP ERROR ===', error);
+  console.error('Init app error:', error);
 });
 
 function setupEventListeners() {
-  console.log('=== SETUP EVENT LISTENERS ===');
   const searchBox = document.getElementById('search-box');
   const createIdeaBtn = document.getElementById('create-idea-btn');
   const aiImportBtn = document.getElementById('ai-import-btn');
@@ -68,8 +32,6 @@ function setupEventListeners() {
   const importBtn = document.getElementById('import-btn');
   const settingsBtn = document.getElementById('settings-btn');
   const dueCounter = document.getElementById('due-counter');
-
-  console.log('aiImportBtn:', aiImportBtn);
 
   if (searchBox) {
     searchBox.addEventListener('input', (e) => {
@@ -84,13 +46,9 @@ function setupEventListeners() {
   }
 
   if (aiImportBtn) {
-    console.log('Adding AI Import button listener');
     aiImportBtn.addEventListener('click', () => {
-      console.log('AI Import button clicked!');
       showAIImportDialog(appState);
     });
-  } else {
-    console.log('AI Import button not found!');
   }
 
   if (quickAddInput && quickAddBtn) {
@@ -339,19 +297,13 @@ function applyGlassyMode() {
 }
 
 function render() {
-  console.log('=== RENDER FUNCTION CALLED ===');
-  console.log('Current view:', appState.currentView);
   applyGlassyMode();
   renderSidebar(appState);
 
   const mainPanel = document.getElementById('main-panel');
-  if (!mainPanel) {
-    console.log('Main panel not found!');
-    return;
-  }
+  if (!mainPanel) return;
 
   if (appState.currentView === 'canvas') {
-    console.log('=== CALLING RENDER CANVAS ===');
     renderCanvas(appState);
   } else {
     renderIdeaDetail(appState);

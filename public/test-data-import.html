@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Import Test Data</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f0eb;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2b2622;
+      margin-bottom: 20px;
+    }
+    p {
+      color: #4b4540;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    button {
+      background: #6b7280;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #4b5563;
+    }
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+    .error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Import Test Data</h1>
+    <p>This will generate and import a comprehensive set of test ideas to demonstrate the canvas visualization capabilities. The test data includes:</p>
+    <ul>
+      <li>5 main topic areas (Product Strategy, Technical Architecture, User Experience, Business Operations, Marketing & Growth)</li>
+      <li>25 subtopics across all main topics</li>
+      <li>75+ detailed ideas with parent-child relationships</li>
+      <li>Numerous peer connections between related ideas</li>
+      <li>Complete metadata including assumptions, questions, next steps, and tags</li>
+    </ul>
+    <p><strong>Warning:</strong> This will add to your existing ideas. Use the "Clear All Data" button below if you want a fresh start.</p>
+    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <button id="clearBtn" style="background: #dc2626;">Clear All Data</button>
+      <button id="importBtn">Generate and Import Test Data</button>
+    </div>
+    <div id="success" class="success"></div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <script type="module">
+    import { openDB } from 'https://esm.sh/idb@7';
+
+    function generateId() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    const topics = [
+      {
+        name: 'Product Strategy',
+        subtopics: ['Market Analysis', 'Competitive Landscape', 'Value Proposition', 'Roadmap Planning', 'Feature Prioritization']
+      },
+      {
+        name: 'Technical Architecture',
+        subtopics: ['Backend Systems', 'Frontend Framework', 'Database Design', 'API Integration', 'Security Protocols']
+      },
+      {
+        name: 'User Experience',
+        subtopics: ['User Research', 'Interface Design', 'Accessibility', 'Performance Optimization', 'Mobile Responsiveness']
+      },
+      {
+        name: 'Business Operations',
+        subtopics: ['Team Structure', 'Budget Planning', 'Resource Allocation', 'Timeline Management', 'Risk Assessment']
+      },
+      {
+        name: 'Marketing & Growth',
+        subtopics: ['Brand Strategy', 'Content Marketing', 'Social Media', 'SEO Optimization', 'Customer Acquisition']
+      }
+    ];
+
+    const statuses = ['Exploring', 'Validating', 'Planning', 'In Progress', 'Review', 'Completed'];
+    const colorVariants = ['primary', 'secondary', 'tertiary'];
+
+    function generateIdea(title, parent = null) {
+      const now = Date.now();
+      const idea = {
+        id: generateId(),
+        title,
+        summary: `Key considerations for ${title.toLowerCase()} include multiple factors that need careful evaluation and strategic planning.`,
+        status: statuses[Math.floor(Math.random() * statuses.length)],
+        confidence: Math.floor(Math.random() * 40) + 60,
+        color_variant: colorVariants[Math.floor(Math.random() * colorVariants.length)],
+        canvas_pos: {
+          x: Math.random() * 3000,
+          y: Math.random() * 2000
+        },
+        links: [],
+        parent_id: parent ? parent.id : null,
+        assumptions: [
+          'Market demand will remain stable over the next 12 months',
+          'Technical team capacity will be sufficient',
+          'User adoption rate will meet expectations'
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        open_questions: [
+          'What are the primary success metrics?',
+          'How will we measure user engagement?',
+          'What are the potential risks?'
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        next_steps: [
+          'Conduct stakeholder interviews',
+          'Create detailed project plan',
+          'Develop prototype for testing'
+        ].slice(0, Math.floor(Math.random() * 3) + 1),
+        tags: ['strategy', 'planning', 'research'].slice(0, Math.floor(Math.random() * 3) + 1),
+        created_at: now,
+        updated_at: now,
+        last_reviewed_at: null,
+        next_review_at: now + Math.random() * 30 * 24 * 60 * 60 * 1000,
+        review_cadence_days: 14,
+        ignored_count: 0,
+        merged_from: [],
+        is_archived: false,
+        reviews: []
+      };
+
+      if (parent) {
+        parent.links.push(idea.id);
+        idea.links.push(parent.id);
+      }
+
+      return idea;
+    }
+
+    async function generateTestData() {
+      const ideas = [];
+      const ideaMap = new Map();
+
+      const canvasWidth = 6000;
+      const canvasHeight = 4000;
+      const topicSpacing = canvasWidth / topics.length;
+      const bubbleWidth = 260;
+      const bubbleHeight = 160;
+      const horizontalGap = 80;
+      const verticalGap = 120;
+
+      topics.forEach((topic, topicIndex) => {
+        const topicCenterX = topicIndex * topicSpacing + topicSpacing / 2;
+        const topicY = 200;
+
+        const mainIdea = generateIdea(topic.name);
+        mainIdea.canvas_pos = {
+          x: topicCenterX - bubbleWidth / 2,
+          y: topicY
+        };
+        ideas.push(mainIdea);
+        ideaMap.set(topic.name, mainIdea);
+
+        const subtopicSpacing = bubbleWidth + horizontalGap;
+        const subtopicStartX = topicCenterX - (topic.subtopics.length * subtopicSpacing) / 2 + subtopicSpacing / 2;
+        const subtopicY = topicY + bubbleHeight + verticalGap;
+
+        topic.subtopics.forEach((subtopic, subIndex) => {
+          const subCenterX = subtopicStartX + subIndex * subtopicSpacing;
+
+          const subIdea = generateIdea(`${topic.name}: ${subtopic}`, mainIdea);
+          subIdea.canvas_pos = {
+            x: subCenterX - bubbleWidth / 2,
+            y: subtopicY
+          };
+          ideas.push(subIdea);
+          ideaMap.set(`${topic.name}:${subtopic}`, subIdea);
+
+          const detailCount = Math.floor(Math.random() * 3) + 2;
+          const detailSpacing = bubbleWidth + horizontalGap;
+          const detailStartX = subCenterX - (detailCount * detailSpacing) / 2 + detailSpacing / 2;
+          const detailY = subtopicY + bubbleHeight + verticalGap;
+
+          for (let i = 0; i < detailCount; i++) {
+            const detailIdea = generateIdea(`${topic.name}: ${subtopic} - Detail ${i + 1}`, subIdea);
+            detailIdea.canvas_pos = {
+              x: detailStartX + i * detailSpacing - bubbleWidth / 2,
+              y: detailY
+            };
+            ideas.push(detailIdea);
+          }
+        });
+      });
+
+      ideas.forEach(idea => {
+        const peerCount = Math.floor(Math.random() * 2);
+        const potentialPeers = ideas.filter(other => 
+          other.id !== idea.id && 
+          other.parent_id !== idea.parent_id &&
+          !idea.links.includes(other.id)
+        );
+
+        for (let i = 0; i < peerCount && potentialPeers.length > 0; i++) {
+          const peerIndex = Math.floor(Math.random() * potentialPeers.length);
+          const peer = potentialPeers.splice(peerIndex, 1)[0];
+          idea.links.push(peer.id);
+          peer.links.push(idea.id);
+        }
+      });
+
+      return ideas;
+    }
+
+    async function clearAllData() {
+      const btn = document.getElementById('clearBtn');
+      const success = document.getElementById('success');
+      const error = document.getElementById('error');
+
+      btn.disabled = true;
+      btn.textContent = 'Clearing...';
+      success.style.display = 'none';
+      error.style.display = 'none';
+
+      try {
+        const db = await openDB('incubator_ideas_db', 1, {
+          upgrade(db) {
+            if (!db.objectStoreNames.contains('ideas')) {
+              const ideasStore = db.createObjectStore('ideas', { keyPath: 'id' });
+              ideasStore.createIndex('status', 'status', { unique: false });
+              ideasStore.createIndex('created_at', 'created_at', { unique: false });
+              ideasStore.createIndex('next_review_at', 'next_review_at', { unique: false });
+              ideasStore.createIndex('is_archived', 'is_archived', { unique: false });
+            }
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+            }
+          }
+        });
+
+        await db.clear('ideas');
+        console.log('Cleared all ideas from database');
+
+        success.textContent = 'Successfully cleared all data! You can now import fresh test data.';
+        success.style.display = 'block';
+        btn.textContent = 'Cleared';
+      } catch (err) {
+        console.error('Clear failed:', err);
+        error.textContent = `Clear failed: ${err.message}`;
+        error.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+      }
+    }
+
+    async function importTestData() {
+      const btn = document.getElementById('importBtn');
+      const success = document.getElementById('success');
+      const error = document.getElementById('error');
+
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      success.style.display = 'none';
+      error.style.display = 'none';
+
+      try {
+        const db = await openDB('incubator_ideas_db', 1, {
+          upgrade(db) {
+            if (!db.objectStoreNames.contains('ideas')) {
+              const ideasStore = db.createObjectStore('ideas', { keyPath: 'id' });
+              ideasStore.createIndex('status', 'status', { unique: false });
+              ideasStore.createIndex('created_at', 'created_at', { unique: false });
+              ideasStore.createIndex('next_review_at', 'next_review_at', { unique: false });
+              ideasStore.createIndex('is_archived', 'is_archived', { unique: false });
+            }
+            if (!db.objectStoreNames.contains('settings')) {
+              db.createObjectStore('settings', { keyPath: 'key' });
+            }
+          }
+        });
+
+        const testData = await generateTestData();
+        
+        console.log('Generated test data:', testData.length, 'ideas');
+        console.log('Sample idea:', testData[0]);
+        
+        for (const idea of testData) {
+          await db.put('ideas', idea);
+        }
+
+        const allIdeas = await db.getAll('ideas');
+        console.log('Total ideas in database after import:', allIdeas.length);
+
+        success.textContent = `Successfully imported ${testData.length} test ideas! You can now view them in the main application.`;
+        success.style.display = 'block';
+        btn.textContent = 'Import Complete';
+      } catch (err) {
+        console.error('Import failed:', err);
+        error.textContent = `Import failed: ${err.message}`;
+        error.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Try Again';
+      }
+    }
+
+    document.getElementById('clearBtn').addEventListener('click', clearAllData);
+    document.getElementById('importBtn').addEventListener('click', importTestData);
+  </script>
+</body>
+</html>

@@ -154,9 +154,9 @@ Example:
     try {
       const { createAIService } = await import('../services/ai_service.js');
       const aiService = createAIService({
-        provider: state.settings.aiProvider,
+        provider: 'tensorix',
         apiKey: apiKey,
-        model: state.settings.aiModel
+        model: 'z-ai/glm-4.7'
       });
 
       const response = await aiService.generateIdeasFromNotes(notes);

@@ -52,33 +52,14 @@
   <div id="modal-container"></div>
 
   <script>
-    console.log('=== HTML SCRIPT LOADED ===');
-    console.log('DOM ready:', document.readyState);
-
     window.addEventListener('error', function(e) {
-      console.error('=== GLOBAL ERROR ===', e.error);
+      console.error('Global error:', e.error);
     });
 
     window.addEventListener('unhandledrejection', function(e) {
-      console.error('=== UNHANDLED PROMISE REJECTION ===', e.reason);
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('=== DOM CONTENT LOADED ===');
-      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
-    });
-
-    window.addEventListener('load', function() {
-      console.log('=== WINDOW LOADED ===');
-      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
+      console.error('Unhandled promise rejection:', e.reason);
     });
   </script>
   <script type="module" src="app.js"></script>
-  <script>
-    setTimeout(function() {
-      console.log('=== TIMEOUT CHECK ===');
-      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
-    }, 1000);
-  </script>
 </body>
 </html>

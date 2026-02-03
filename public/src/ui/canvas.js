@@ -1,10 +1,8 @@
 import { isIdeaDue } from '../models/idea.js';
 import { showReviewModal } from './review_modal.js';
 
-console.log('=== CANVAS.JS LOADED ===');
-
 let canvasState = {
-  scale: 1,
+  scale: 0.5,
   offsetX: 0,
   offsetY: 0,
   isDragging: false,
@@ -24,15 +22,10 @@ let canvasState = {
 };
 
 export function renderCanvas(state) {
-  console.log('=== RENDER CANVAS START ===');
   const container = document.getElementById('main-panel');
-  if (!container) {
-    console.log('Container not found!');
-    return;
-  }
+  if (!container) return;
 
   const ideas = state.getFilteredIdeas();
-  console.log('Ideas count:', ideas.length);
 
   container.innerHTML = `
     <div class="panel-header">
@@ -43,6 +36,8 @@ export function renderCanvas(state) {
       <div style="display: flex; gap: 8px;">
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
+        <button class="secondary" id="toggle-legend">Legend</button>
+        <button class="secondary" id="fit-view">Fit View</button>
         <button class="secondary" id="reset-view">Reset View</button>
       </div>
     </div>
@@ -50,6 +45,14 @@ export function renderCanvas(state) {
       <div class="bubble-canvas" id="bubble-canvas">
         <div class="canvas-container" id="canvas-container">
           <svg class="connection-lines" id="connection-lines" style="overflow: visible; position: absolute; top: -5000px; left: -5000px; width: 20000px; height: 20000px;">
+            <defs>
+              <marker id="arrowhead-parent" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#8b7355" />
+              </marker>
+              <marker id="arrowhead-peer" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                <polygon points="0 0, 10 3.5, 0 7" fill="#d4a574" />
+              </marker>
+            </defs>
             ${renderConnectionLines(ideas)}
           </svg>
           ${ideas.map(idea => renderBubble(idea, state)).join('')}
@@ -58,6 +61,37 @@ export function renderCanvas(state) {
           <button class="canvas-control-btn" id="zoom-out">−</button>
           <span class="canvas-zoom-level" id="zoom-level">100%</span>
           <button class="canvas-control-btn" id="zoom-in">+</button>
+        </div>
+        <div class="minimap" id="minimap">
+          <div class="minimap-content" id="minimap-content"></div>
+          <div class="minimap-viewport" id="minimap-viewport"></div>
+        </div>
+        <div class="link-legend" id="link-legend" style="display: none;">
+          <div class="legend-title">Link Types</div>
+          <div class="legend-item">
+            <svg width="40" height="20" style="display: inline-block; vertical-align: middle;">
+              <line x1="0" y1="10" x2="40" y2="10" stroke="#8b7355" stroke-width="3" />
+              <polygon points="35,6 40,10 35,14" fill="#8b7355" />
+            </svg>
+            <span>Parent → Child</span>
+          </div>
+          <div class="legend-item">
+            <svg width="40" height="20" style="display: inline-block; vertical-align: middle;">
+              <line x1="0" y1="10" x2="40" y2="10" stroke="#d4a574" stroke-width="2" stroke-dasharray="5,5" />
+            </svg>
+            <span>Peer Connection</span>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-title">View Controls</div>
+          <div class="legend-item">
+            <span>🖱️ Drag to pan</span>
+          </div>
+          <div class="legend-item">
+            <span>🔍 Scroll to zoom</span>
+          </div>
+          <div class="legend-item">
+            <span>🗺️ Click minimap to navigate</span>
+          </div>
         </div>
       </div>
     </div>
@@ -73,10 +107,51 @@ export function renderCanvas(state) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       updateConnectionLines(state);
+      updateMinimap(state);
+      autoFitCanvas(state);
     });
   });
+}
 
-  console.log('=== RENDER CANVAS COMPLETE ===');
+function autoFitCanvas(state) {
+  const ideas = state.getFilteredIdeas();
+  if (ideas.length === 0) return;
+
+  const canvas = document.getElementById('bubble-canvas');
+  if (!canvas) return;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  
+  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+
+  const contentWidth = maxX - minX;
+  const contentHeight = maxY - minY;
+  const contentCenterX = minX + contentWidth / 2;
+  const contentCenterY = minY + contentHeight / 2;
+
+  const padding = 100;
+  const scaleX = (canvasRect.width - padding * 2) / contentWidth;
+  const scaleY = (canvasRect.height - padding * 2) / contentHeight;
+  const newScale = Math.min(scaleX, scaleY, 1);
+
+  canvasState.scale = newScale;
+  canvasState.offsetX = canvasRect.width / 2 - contentCenterX * newScale;
+  canvasState.offsetY = canvasRect.height / 2 - contentCenterY * newScale;
+
+  const canvasContainer = document.getElementById('canvas-container');
+  if (canvasContainer) {
+    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
+  }
+
+  const zoomLevel = document.getElementById('zoom-level');
+  if (zoomLevel) {
+    zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
+  }
+
+  updateMinimap(state);
 }
 
 function renderConnectionLines(ideas) {
@@ -91,9 +166,11 @@ function renderConnectionLines(ideas) {
           processedLinks.add(linkKey);
           const linkedIdea = ideas.find(i => i.id === linkId);
           if (linkedIdea) {
+            const isParentChild = idea.parent_id === linkId || linkedIdea.parent_id === idea.id;
             lines.push({
               from: idea.canvas_pos,
-              to: linkedIdea.canvas_pos
+              to: linkedIdea.canvas_pos,
+              isParentChild
             });
           }
         }
@@ -121,16 +198,16 @@ function renderConnectionLines(ideas) {
     
     const linkKey = [line.from.id, line.to.id].sort().join('-');
     const isSelected = canvasState.selectedLink === linkKey;
+    const linkTypeClass = line.isParentChild ? 'parent-child' : 'peer';
+    const markerEnd = line.isParentChild ? 'url(#arrowhead-parent)' : '';
     
     return `<line 
-      class="connection-line ${isSelected ? 'selected' : ''}" 
+      class="connection-line ${linkTypeClass} ${isSelected ? 'selected' : ''}" 
       data-link="${linkKey}"
       data-from="${line.from.id}"
       data-to="${line.to.id}"
       x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
-      stroke="#d4a574" 
-      stroke-width="${isSelected ? 4 : 2}" 
-      stroke-dasharray="5,5" 
+      marker-end="${markerEnd}"
       style="cursor: ${canvasState.linkMode ? 'pointer' : 'default'}"
     />`;
   }).join('');
@@ -167,7 +244,8 @@ function updateConnectionLines(state) {
               id: linkId
             } : { ...linkedIdea.canvas_pos, id: linkId };
             
-            lines.push({ from: fromPos, to: toPos });
+            const isParentChild = idea.parent_id === linkId || linkedIdea.parent_id === idea.id;
+            lines.push({ from: fromPos, to: toPos, isParentChild });
           }
         }
       });
@@ -194,16 +272,16 @@ function updateConnectionLines(state) {
     
     const linkKey = [line.from.id, line.to.id].sort().join('-');
     const isSelected = canvasState.selectedLink === linkKey;
+    const linkTypeClass = line.isParentChild ? 'parent-child' : 'peer';
+    const markerEnd = line.isParentChild ? 'url(#arrowhead-parent)' : '';
     
     return `<line 
-      class="connection-line ${isSelected ? 'selected' : ''}" 
+      class="connection-line ${linkTypeClass} ${isSelected ? 'selected' : ''}" 
       data-link="${linkKey}"
       data-from="${line.from.id}"
       data-to="${line.to.id}"
       x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
-      stroke="#d4a574" 
-      stroke-width="${isSelected ? 4 : 2}" 
-      stroke-dasharray="5,5" 
+      marker-end="${markerEnd}"
       style="cursor: ${canvasState.linkMode ? 'pointer' : 'default'}"
     />`;
   }).join('');
@@ -238,7 +316,6 @@ function renderBubble(idea, state) {
 }
 
 function attachCanvasListeners(state) {
-  console.log('=== ATTACHING CANVAS LISTENERS ===');
   const canvas = document.getElementById('bubble-canvas');
   const container = document.getElementById('canvas-container');
   const zoomInBtn = document.getElementById('zoom-in');
@@ -246,19 +323,14 @@ function attachCanvasListeners(state) {
   const zoomLevel = document.getElementById('zoom-level');
   const resetViewBtn = document.getElementById('reset-view');
 
-  console.log('Canvas element:', canvas);
-  console.log('Container element:', container);
-
-  if (!canvas || !container) {
-    console.error('Canvas or container not found!');
-    return;
-  }
+  if (!canvas || !container) return;
 
   const updateTransform = () => {
     container.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
     if (zoomLevel) {
       zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
     }
+    updateMinimap(state);
   };
 
   canvas.addEventListener('mousedown', (e) => {
@@ -294,6 +366,7 @@ function attachCanvasListeners(state) {
       canvasState.offsetX = e.clientX - canvasState.panStartX;
       canvasState.offsetY = e.clientY - canvasState.panStartY;
       updateTransform();
+      updateMinimap(state);
     }
   });
 
@@ -410,24 +483,14 @@ function attachCanvasListeners(state) {
         } else {
           const ideaId = bubble.dataset.id;
           const idea = state.ideas.find(i => i.id === ideaId);
-          console.log('=== BUBBLE CLICK DEBUG ===');
-          console.log('Bubble clicked:', ideaId);
-          console.log('Idea:', idea);
-          console.log('isIdeaDue:', isIdeaDue(idea));
-          console.log('bubbleWasMoved:', canvasState.bubbleWasMoved);
-          console.log('linkMode:', canvasState.linkMode);
-          console.log('mergeMode:', canvasState.mergeMode);
-          console.log('========================');
 
           if (idea && isIdeaDue(idea)) {
-            console.log('Showing review modal');
             showReviewModal(idea,
               (id, data) => state.submitReview(id, data),
               (id, days) => state.snoozeIdea(id, days),
               (id) => state.archiveIdea(id)
             );
           } else {
-            console.log('Showing context menu for:', idea);
             e.preventDefault();
             e.stopPropagation();
             showContextMenu(e, bubble, idea, state);
@@ -458,6 +521,13 @@ function attachCanvasListeners(state) {
       canvasState.offsetX = 0;
       canvasState.offsetY = 0;
       updateTransform();
+    });
+  }
+
+  const fitViewBtn = document.getElementById('fit-view');
+  if (fitViewBtn) {
+    fitViewBtn.addEventListener('click', () => {
+      autoFitCanvas(state);
     });
   }
 
@@ -549,6 +619,91 @@ function attachCanvasListeners(state) {
       state.setCurrentView(view);
     });
   });
+
+  const minimap = document.getElementById('minimap');
+  if (minimap) {
+    minimap.addEventListener('click', (e) => {
+      const rect = minimap.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      
+      const ideas = state.getFilteredIdeas();
+      if (ideas.length === 0) return;
+      
+      const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+      const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+      const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+      const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+      
+      const contentWidth = maxX - minX + 100;
+      const contentHeight = maxY - minY + 100;
+      
+      const contentX = minX + x * contentWidth;
+      const contentY = minY + y * contentHeight;
+      
+      const canvas = document.getElementById('bubble-canvas');
+      if (canvas) {
+        const canvasRect = canvas.getBoundingClientRect();
+        canvasState.offsetX = canvasRect.width / 2 - contentX * canvasState.scale;
+        canvasState.offsetY = canvasRect.height / 2 - contentY * canvasState.scale;
+        
+        const canvasContainer = document.getElementById('canvas-container');
+        if (canvasContainer) {
+          canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
+        }
+        updateMinimap(state);
+      }
+    });
+  }
+
+  const toggleLegendBtn = document.getElementById('toggle-legend');
+  if (toggleLegendBtn) {
+    toggleLegendBtn.addEventListener('click', () => {
+      const legend = document.getElementById('link-legend');
+      if (legend) {
+        legend.style.display = legend.style.display === 'none' ? 'block' : 'none';
+      }
+    });
+  }
+}
+
+function updateMinimap(state) {
+  const minimapContent = document.getElementById('minimap-content');
+  const minimapViewport = document.getElementById('minimap-viewport');
+  const canvas = document.getElementById('bubble-canvas');
+  
+  if (!minimapContent || !minimapViewport || !canvas) return;
+  
+  const ideas = state.getFilteredIdeas();
+  if (ideas.length === 0) return;
+  
+  const canvasRect = canvas.getBoundingClientRect();
+  
+  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+  
+  const width = maxX - minX + 100;
+  const height = maxY - minY + 100;
+  
+  minimapContent.innerHTML = ideas.map(idea => {
+    const x = ((idea.canvas_pos.x - minX) / width) * 100;
+    const y = ((idea.canvas_pos.y - minY) / height) * 100;
+    const w = (260 / width) * 100;
+    const h = (160 / height) * 100;
+    return `<div class="minimap-bubble" style="left: ${x}%; top: ${y}%; width: ${w}%; height: ${h}%;"></div>`;
+  }).join('');
+  
+  const viewportX = ((-canvasState.offsetX / canvasState.scale - minX) / width) * 100;
+  const viewportY = ((-canvasState.offsetY / canvasState.scale - minY) / height) * 100;
+  const viewportW = (canvasRect.width / canvasState.scale / width) * 100;
+  const viewportH = (canvasRect.height / canvasState.scale / height) * 100;
+  
+  minimapViewport.style.left = `${viewportX}%`;
+  minimapViewport.style.top = `${viewportY}%`;
+  minimapViewport.style.width = `${viewportW}%`;
+  minimapViewport.style.height = `${viewportH}%`;
 }
 
 function showLinkDialog(state, ideaId) {
@@ -650,12 +805,6 @@ function escapeHtml(text) {
 }
 
 function showContextMenu(e, bubble, idea, state) {
-  console.log('=== SHOW CONTEXT MENU DEBUG ===');
-  console.log('Event:', e);
-  console.log('Bubble:', bubble);
-  console.log('Idea:', idea);
-  console.log('===============================');
-
   e.preventDefault();
   e.stopPropagation();
 
@@ -664,7 +813,6 @@ function showContextMenu(e, bubble, idea, state) {
   const isMerged = idea.merged_from && idea.merged_from.length > 0;
   const linkedIdeas = idea.links.map(id => state.ideas.find(i => i.id === id)).filter(Boolean);
 
-  console.log('Creating menu element...');
   const menu = document.createElement('div');
   menu.className = 'idea-context-menu';
   menu.style.position = 'fixed';
@@ -695,24 +843,11 @@ function showContextMenu(e, bubble, idea, state) {
   `;
 
   const rect = bubble.getBoundingClientRect();
-  console.log('Bubble rect:', rect);
-
   menu.style.left = (rect.right + 10) + 'px';
   menu.style.top = rect.top + 'px';
-  console.log('Menu position:', menu.style.left, menu.style.top);
 
-  console.log('Appending menu to body...');
   document.body.appendChild(menu);
   canvasState.contextMenu = menu;
-  console.log('Menu appended to body', menu);
-  console.log('Menu in DOM:', document.body.contains(menu));
-  console.log('Menu computed style:', window.getComputedStyle(menu).display);
-
-  requestAnimationFrame(() => {
-    console.log('Menu should now be visible:', menu);
-    console.log('Menu offsetWidth:', menu.offsetWidth);
-    console.log('Menu offsetHeight:', menu.offsetHeight);
-  });
   
   menu.addEventListener('click', async (e) => {
     e.stopPropagation();

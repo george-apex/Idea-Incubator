@@ -2,7 +2,7 @@ export class AIService {
   constructor(config = {}) {
     this.provider = config.provider || 'tensorix';
     this.apiKey = config.apiKey || '';
-    this.model = config.model || 'gpt-4o-mini';
+    this.model = config.model || 'z-ai/glm-4.7';
     this.baseUrl = config.baseUrl || 'https://api.tensorix.ai/v1';
   }
 
@@ -49,38 +49,49 @@ Return ONLY valid JSON, no additional text.`;
 
   async callAI(prompt) {
     try {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      headers['Authorization'] = `Bearer ${this.apiKey}`;
+
+      const requestBody = {
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that extracts structured ideas from text and returns valid JSON.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 4000
+      };
+
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          model: this.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that extracts structured ideas from text and returns valid JSON.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 4000
-        })
+        headers,
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`AI API Error: ${error.error?.message || response.statusText}`);
+        const errorText = await response.text();
+        let errorMessage = response.statusText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error?.message || errorJson.message || errorMessage;
+        } catch (e) {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(`AI API Error: ${errorMessage}`);
       }
 
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
-      console.error('AI Service Error:', error);
       throw error;
     }
   }
@@ -94,8 +105,6 @@ Return ONLY valid JSON, no additional text.`;
       }
       return JSON.parse(cleaned);
     } catch (error) {
-      console.error('Failed to parse AI response:', error);
-      console.error('Response was:', response);
       throw new Error('Failed to parse AI response as JSON');
     }
   }
