@@ -1,33 +1,75 @@
+console.log('=== APP.JS LOADING ===');
+console.trace('APP.JS TRACE');
+
 import { appState } from './state.js';
+console.log('=== IMPORTED STATE ===');
+
 import { renderSidebar } from '../ui/sidebar.js';
+console.log('=== IMPORTED SIDEBAR ===');
+
 import { renderIdeaDetail } from '../ui/idea_detail.js';
+console.log('=== IMPORTED IDEA_DETAIL ===');
+
 import { renderCanvas } from '../ui/canvas.js';
+console.log('=== IMPORTED CANVAS ===');
+
 import { showReviewModal } from '../ui/review_modal.js';
+console.log('=== IMPORTED REVIEW_MODAL ===');
+
+import { showAIImportDialog } from '../ui/ai_import.js';
+console.log('=== IMPORTED AI_IMPORT ===');
+
 import { exportToPideas, exportToMarkdown, importFromPideas, showImportDialog } from '../utils/export_import.js';
+console.log('=== IMPORTED EXPORT_IMPORT ===');
+
 import { bulkSaveIdeas } from '../db/idb.js';
+console.log('=== IMPORTED BULK_SAVE ===');
+
 import { generateUUID } from '../utils/uuid.js';
+console.log('=== IMPORTED UUID ===');
+
+console.log('=== IMPORTS COMPLETE ===');
+console.log('appState:', appState);
 
 let dueCheckInterval = null;
 
 export async function initApp() {
+  console.log('=== INIT APP START ===');
+  console.log('appState exists?', !!appState);
   await appState.init();
-  
+  console.log('=== APP STATE INITIALIZED ===');
+
+  console.log('DOM ready?', document.readyState);
+  console.log('ai-import-btn exists?', document.getElementById('ai-import-btn'));
+
   setupEventListeners();
   startDueCheck();
+  console.log('=== CALLING RENDER ===');
   render();
-  
+
   appState.subscribe(render);
+  console.log('=== INIT APP COMPLETE ===');
 }
 
+console.log('=== INIT APP FUNCTION DEFINED ===');
+console.log('Calling initApp...');
+initApp().catch(error => {
+  console.error('=== INIT APP ERROR ===', error);
+});
+
 function setupEventListeners() {
+  console.log('=== SETUP EVENT LISTENERS ===');
   const searchBox = document.getElementById('search-box');
   const createIdeaBtn = document.getElementById('create-idea-btn');
+  const aiImportBtn = document.getElementById('ai-import-btn');
   const quickAddInput = document.getElementById('quick-add-input');
   const quickAddBtn = document.getElementById('quick-add-btn');
   const exportBtn = document.getElementById('export-btn');
   const importBtn = document.getElementById('import-btn');
   const settingsBtn = document.getElementById('settings-btn');
   const dueCounter = document.getElementById('due-counter');
+
+  console.log('aiImportBtn:', aiImportBtn);
 
   if (searchBox) {
     searchBox.addEventListener('input', (e) => {
@@ -39,6 +81,16 @@ function setupEventListeners() {
     createIdeaBtn.addEventListener('click', () => {
       appState.createIdea({ title: 'New Idea' });
     });
+  }
+
+  if (aiImportBtn) {
+    console.log('Adding AI Import button listener');
+    aiImportBtn.addEventListener('click', () => {
+      console.log('AI Import button clicked!');
+      showAIImportDialog(appState);
+    });
+  } else {
+    console.log('AI Import button not found!');
   }
 
   if (quickAddInput && quickAddBtn) {
@@ -168,7 +220,7 @@ function showSettingsDialog() {
     <div class="modal-overlay" id="settings-modal">
       <div class="modal-content" style="max-width: 500px;">
         <h2 style="margin-bottom: 16px;">Settings</h2>
-        
+
         <div style="margin-bottom: 16px;">
           <label for="setting-theme" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Theme Intensity</label>
           <select id="setting-theme" style="width: 100%;">
@@ -177,26 +229,56 @@ function showSettingsDialog() {
             <option value="high" ${appState.settings.themeIntensity === 'high' ? 'selected' : ''}>High Contrast</option>
           </select>
         </div>
-        
+
         <div style="margin-bottom: 16px;">
           <label for="setting-float" style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
             <span style="font-size: 14px; font-weight: 500;">Bubble Float Animation</span>
           </label>
         </div>
-        
+
         <div style="margin-bottom: 16px;">
           <label for="setting-glassy" style="display: flex; align-items: center; gap: 8px;">
             <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
             <span style="font-size: 14px; font-weight: 500;">Glassy Aesthetic</span>
           </label>
         </div>
-        
+
         <div style="margin-bottom: 16px;">
           <label for="setting-cadence" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Default Review Cadence (days)</label>
           <input type="number" id="setting-cadence" value="${appState.settings.defaultReviewCadence}" min="1" max="365" style="width: 100%;">
         </div>
-        
+
+        <div style="margin-bottom: 16px; padding-top: 16px; border-top: 1px solid var(--color-outline);">
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">🤖 AI Settings</h3>
+          <div style="margin-bottom: 12px;">
+            <label for="setting-ai-key" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">
+              Tensorix API Key
+              <span style="font-weight: normal; color: var(--color-text-secondary); font-size: 12px;">
+                (Get one at <a href="https://tensorix.ai" target="_blank" style="color: var(--color-accent-blue);">tensorix.ai</a>)
+              </span>
+            </label>
+            <input
+              type="password"
+              id="setting-ai-key"
+              value="${appState.settings.aiApiKey || ''}"
+              placeholder="sk-..."
+              style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-outline); font-family: monospace;"
+            />
+            <p style="margin-top: 6px; font-size: 12px; color: var(--color-text-secondary);">
+              Your API key is stored locally and never sent to our servers.
+            </p>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label for="setting-ai-model" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">AI Model</label>
+            <select id="setting-ai-model" style="width: 100%;">
+              <option value="gpt-4o-mini" ${appState.settings.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o Mini (Fast, Cost-effective)</option>
+              <option value="gpt-4o" ${appState.settings.aiModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (Best Quality)</option>
+              <option value="gpt-3.5-turbo" ${appState.settings.aiModel === 'gpt-3.5-turbo' ? 'selected' : ''}>GPT-3.5 Turbo (Legacy)</option>
+            </select>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
           <button class="secondary" id="cancel-settings">Cancel</button>
           <button class="primary" id="save-settings">Save</button>
@@ -214,9 +296,11 @@ function showSettingsDialog() {
       themeIntensity: document.getElementById('setting-theme').value,
       bubbleFloat: document.getElementById('setting-float').checked,
       glassyAesthetic: document.getElementById('setting-glassy').checked,
-      defaultReviewCadence: parseInt(document.getElementById('setting-cadence').value)
+      defaultReviewCadence: parseInt(document.getElementById('setting-cadence').value),
+      aiApiKey: document.getElementById('setting-ai-key').value.trim(),
+      aiModel: document.getElementById('setting-ai-model').value
     };
-    
+
     await appState.updateSettings(newSettings);
     container.innerHTML = '';
   });
@@ -255,13 +339,19 @@ function applyGlassyMode() {
 }
 
 function render() {
+  console.log('=== RENDER FUNCTION CALLED ===');
+  console.log('Current view:', appState.currentView);
   applyGlassyMode();
   renderSidebar(appState);
-  
+
   const mainPanel = document.getElementById('main-panel');
-  if (!mainPanel) return;
+  if (!mainPanel) {
+    console.log('Main panel not found!');
+    return;
+  }
 
   if (appState.currentView === 'canvas') {
+    console.log('=== CALLING RENDER CANVAS ===');
     renderCanvas(appState);
   } else {
     renderIdeaDetail(appState);
@@ -281,5 +371,3 @@ export function showReviewForIdea(ideaId) {
     );
   }
 }
-
-initApp();

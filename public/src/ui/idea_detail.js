@@ -42,6 +42,7 @@ export function renderIdeaDetail(state) {
         <button class="panel-tab" data-view="canvas">Canvas</button>
       </div>
       <div style="display: flex; gap: 8px;">
+        ${idea.merged_from && idea.merged_from.length > 0 ? '<button class="secondary" id="split-btn">Split</button>' : ''}
         <button class="secondary" id="archive-btn">${idea.is_archived ? 'Unarchive' : 'Archive'}</button>
         <button class="danger" id="delete-btn">Delete</button>
       </div>
@@ -272,6 +273,7 @@ function attachIdeaDetailListeners(state, idea) {
   const confidenceSlider = document.getElementById('idea-confidence');
   const archiveBtn = document.getElementById('archive-btn');
   const deleteBtn = document.getElementById('delete-btn');
+  const splitBtn = document.getElementById('split-btn');
   const addAssumptionBtn = document.getElementById('add-assumption');
   const addQuestionBtn = document.getElementById('add-question');
   const addNextStepBtn = document.getElementById('add-next-step');
@@ -319,6 +321,47 @@ function attachIdeaDetailListeners(state, idea) {
       if (confirm('Are you sure you want to delete this idea?')) {
         await state.deleteIdea(idea.id);
       }
+    });
+  }
+
+  if (splitBtn) {
+    splitBtn.addEventListener('click', async () => {
+      const originalIdeas = idea.merged_from.map(id => state.ideas.find(i => i.id === id)).filter(Boolean);
+      if (originalIdeas.length === 0) {
+        alert('Cannot split: original ideas not found');
+        return;
+      }
+
+      const container = document.getElementById('modal-container');
+      if (!container) return;
+
+      container.innerHTML = `
+        <div class="modal-overlay" id="split-modal">
+          <div class="modal-content" style="max-width: 500px;">
+            <h2 style="margin-bottom: 16px;">Split Merged Idea</h2>
+            <p style="color: var(--color-text-secondary); margin-bottom: 16px;">
+              This will restore the original ideas that were merged into "${escapeHtml(idea.title)}". The merged idea will be deleted.
+            </p>
+            <div style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+              <strong>Original ideas to restore:</strong>
+              ${originalIdeas.map(i => `<div style="margin-top: 8px;">• ${escapeHtml(i.title || 'Untitled')}</div>`).join('')}
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+              <button class="secondary" id="cancel-split">Cancel</button>
+              <button class="primary" id="confirm-split">Split</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('cancel-split').addEventListener('click', () => {
+        container.innerHTML = '';
+      });
+
+      document.getElementById('confirm-split').addEventListener('click', async () => {
+        await state.splitIdea(idea.id);
+        container.innerHTML = '';
+      });
     });
   }
 

@@ -17,7 +17,10 @@ class AppState {
       bubbleFloat: true,
       defaultReviewCadence: 14,
       customStatuses: [],
-      glassyAesthetic: false
+      glassyAesthetic: false,
+      aiApiKey: '',
+      aiProvider: 'tensorix',
+      aiModel: 'gpt-4o-mini'
     };
     this.listeners = [];
   }
@@ -220,6 +223,26 @@ class AppState {
     this.notify();
   }
 
+  async splitIdea(ideaId) {
+    const mergedIdea = this.ideas.find(i => i.id === ideaId);
+    if (!mergedIdea || !mergedIdea.merged_from || mergedIdea.merged_from.length === 0) return;
+
+    const originalIdeaIds = mergedIdea.merged_from;
+    const originalIdeas = originalIdeaIds.map(id => this.ideas.find(i => i.id === id)).filter(Boolean);
+
+    if (originalIdeas.length === 0) return;
+
+    for (const originalIdea of originalIdeas) {
+      originalIdea.is_archived = false;
+      await this.updateIdea(originalIdea);
+    }
+
+    await this.deleteIdea(ideaId);
+    this.selectedIdeaId = originalIdeas[0].id;
+    this.currentView = 'detail';
+    this.notify();
+  }
+
   async updateSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     for (const [key, value] of Object.entries(newSettings)) {
@@ -269,6 +292,69 @@ class AppState {
   async refreshDueIdeas() {
     this.dueIdeas = await getDueIdeas();
     this.notify();
+  }
+
+  async importIdeasFromAI(aiIdeas) {
+    const createdIdeas = [];
+    const titleToIdMap = {};
+
+    for (const aiIdea of aiIdeas) {
+      const newIdea = createIdea({
+        title: aiIdea.title,
+        summary: aiIdea.summary || '',
+        confidence: aiIdea.confidence || 50,
+        status: aiIdea.status || 'New',
+        color_variant: aiIdea.color_variant || 'primary',
+        tags: aiIdea.tags || [],
+        canvas_pos: {
+          x: Math.random() * 800 + 100,
+          y: Math.random() * 600 + 100
+        }
+      });
+
+      await saveIdea(newIdea);
+      this.ideas.push(newIdea);
+      createdIdeas.push(newIdea);
+      titleToIdMap[aiIdea.title] = newIdea.id;
+    }
+
+    for (let i = 0; i < createdIdeas.length; i++) {
+      const createdIdea = createdIdeas[i];
+      const aiIdea = aiIdeas[i];
+
+      if (aiIdea.parent && titleToIdMap[aiIdea.parent]) {
+        createdIdea.parent_id = titleToIdMap[aiIdea.parent];
+      }
+
+      if (aiIdea.related_to && aiIdea.related_to.length > 0) {
+        createdIdea.links = aiIdea.related_to
+          .map(title => titleToIdMap[title])
+          .filter(id => id && id !== createdIdea.id);
+      }
+
+      await saveIdea(createdIdea);
+    }
+
+    this.notify();
+    return createdIdeas;
+  }
+
+  setAIApiKey(apiKey) {
+    this.settings.aiApiKey = apiKey;
+    this.updateSettings({ aiApiKey: apiKey });
+  }
+
+  async getAIService() {
+    if (!this.settings.aiApiKey) {
+      throw new Error('AI API key not configured');
+    }
+
+    const { createAIService } = await import('../services/ai_service.js');
+    return createAIService({
+      provider: this.settings.aiProvider,
+      apiKey: this.settings.aiApiKey,
+      model: this.settings.aiModel
+    });
   }
 }
 

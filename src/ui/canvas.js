@@ -1,4 +1,7 @@
 import { isIdeaDue } from '../models/idea.js';
+import { showReviewModal } from './review_modal.js';
+
+console.log('=== CANVAS.JS LOADED ===');
 
 let canvasState = {
   scale: 1,
@@ -16,14 +19,20 @@ let canvasState = {
   linkSourceBubble: null,
   selectedLink: null,
   mergeMode: false,
-  mergeSourceBubble: null
+  mergeSourceBubble: null,
+  contextMenu: null
 };
 
 export function renderCanvas(state) {
+  console.log('=== RENDER CANVAS START ===');
   const container = document.getElementById('main-panel');
-  if (!container) return;
+  if (!container) {
+    console.log('Container not found!');
+    return;
+  }
 
   const ideas = state.getFilteredIdeas();
+  console.log('Ideas count:', ideas.length);
 
   container.innerHTML = `
     <div class="panel-header">
@@ -55,17 +64,19 @@ export function renderCanvas(state) {
   `;
 
   attachCanvasListeners(state);
-  
+
   const canvasContainer = document.getElementById('canvas-container');
   if (canvasContainer) {
     canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
   }
-  
+
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       updateConnectionLines(state);
     });
   });
+
+  console.log('=== RENDER CANVAS COMPLETE ===');
 }
 
 function renderConnectionLines(ideas) {
@@ -227,6 +238,7 @@ function renderBubble(idea, state) {
 }
 
 function attachCanvasListeners(state) {
+  console.log('=== ATTACHING CANVAS LISTENERS ===');
   const canvas = document.getElementById('bubble-canvas');
   const container = document.getElementById('canvas-container');
   const zoomInBtn = document.getElementById('zoom-in');
@@ -234,7 +246,13 @@ function attachCanvasListeners(state) {
   const zoomLevel = document.getElementById('zoom-level');
   const resetViewBtn = document.getElementById('reset-view');
 
-  if (!canvas || !container) return;
+  console.log('Canvas element:', canvas);
+  console.log('Container element:', container);
+
+  if (!canvas || !container) {
+    console.error('Canvas or container not found!');
+    return;
+  }
 
   const updateTransform = () => {
     container.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
@@ -392,14 +410,28 @@ function attachCanvasListeners(state) {
         } else {
           const ideaId = bubble.dataset.id;
           const idea = state.ideas.find(i => i.id === ideaId);
+          console.log('=== BUBBLE CLICK DEBUG ===');
+          console.log('Bubble clicked:', ideaId);
+          console.log('Idea:', idea);
+          console.log('isIdeaDue:', isIdeaDue(idea));
+          console.log('bubbleWasMoved:', canvasState.bubbleWasMoved);
+          console.log('linkMode:', canvasState.linkMode);
+          console.log('mergeMode:', canvasState.mergeMode);
+          console.log('========================');
+
           if (idea && isIdeaDue(idea)) {
-            showReviewModal(idea, 
+            console.log('Showing review modal');
+            showReviewModal(idea,
               (id, data) => state.submitReview(id, data),
               (id, days) => state.snoozeIdea(id, days),
               (id) => state.archiveIdea(id)
             );
           } else {
-            state.setSelectedIdeaId(ideaId);
+            console.log('Showing context menu for:', idea);
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e, bubble, idea, state);
+            return;
           }
         }
       }
@@ -498,6 +530,16 @@ function attachCanvasListeners(state) {
         canvasState.selectedLink = null;
         updateConnectionLines(state);
       }
+    }
+    
+    if (e.key === 'Escape') {
+      closeContextMenu();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (canvasState.contextMenu && !e.target.closest('.idea-context-menu') && !e.target.closest('.idea-bubble')) {
+      closeContextMenu();
     }
   });
 
@@ -605,4 +647,221 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function showContextMenu(e, bubble, idea, state) {
+  console.log('=== SHOW CONTEXT MENU DEBUG ===');
+  console.log('Event:', e);
+  console.log('Bubble:', bubble);
+  console.log('Idea:', idea);
+  console.log('===============================');
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  closeContextMenu();
+
+  const isMerged = idea.merged_from && idea.merged_from.length > 0;
+  const linkedIdeas = idea.links.map(id => state.ideas.find(i => i.id === id)).filter(Boolean);
+
+  console.log('Creating menu element...');
+  const menu = document.createElement('div');
+  menu.className = 'idea-context-menu';
+  menu.style.position = 'fixed';
+  menu.innerHTML = `
+    <div class="context-menu-item" data-action="update">
+      <span class="menu-icon">✎</span>
+      <span>Update</span>
+    </div>
+    <div class="context-menu-item" data-action="links">
+      <span class="menu-icon">🔗</span>
+      <span>Manage Links (${linkedIdeas.length})</span>
+    </div>
+    ${isMerged ? `
+      <div class="context-menu-item" data-action="split">
+        <span class="menu-icon">✂️</span>
+        <span>Split Idea</span>
+      </div>
+    ` : ''}
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" data-action="archive">
+      <span class="menu-icon">${idea.is_archived ? '📤' : '📦'}</span>
+      <span>${idea.is_archived ? 'Unarchive' : 'Archive'}</span>
+    </div>
+    <div class="context-menu-item danger" data-action="delete">
+      <span class="menu-icon">🗑️</span>
+      <span>Delete</span>
+    </div>
+  `;
+
+  const rect = bubble.getBoundingClientRect();
+  console.log('Bubble rect:', rect);
+
+  menu.style.left = (rect.right + 10) + 'px';
+  menu.style.top = rect.top + 'px';
+  console.log('Menu position:', menu.style.left, menu.style.top);
+
+  console.log('Appending menu to body...');
+  document.body.appendChild(menu);
+  canvasState.contextMenu = menu;
+  console.log('Menu appended to body', menu);
+  console.log('Menu in DOM:', document.body.contains(menu));
+  console.log('Menu computed style:', window.getComputedStyle(menu).display);
+
+  requestAnimationFrame(() => {
+    console.log('Menu should now be visible:', menu);
+    console.log('Menu offsetWidth:', menu.offsetWidth);
+    console.log('Menu offsetHeight:', menu.offsetHeight);
+  });
+  
+  menu.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const action = e.target.closest('.context-menu-item')?.dataset.action;
+    if (!action) return;
+    
+    closeContextMenu();
+    
+    switch (action) {
+      case 'update':
+        state.setSelectedIdeaId(idea.id);
+        break;
+      case 'links':
+        showLinksContextMenu(bubble, idea, state);
+        break;
+      case 'split':
+        showSplitDialog(idea, state);
+        break;
+      case 'archive':
+        if (idea.is_archived) {
+          await state.unarchiveIdea(idea.id);
+        } else {
+          await state.archiveIdea(idea.id);
+        }
+        break;
+      case 'delete':
+        if (confirm('Are you sure you want to delete this idea?')) {
+          await state.deleteIdea(idea.id);
+        }
+        break;
+    }
+  });
+}
+
+function showLinksContextMenu(bubble, idea, state) {
+  closeContextMenu();
+
+  const linkedIdeas = idea.links.map(id => state.ideas.find(i => i.id === id)).filter(Boolean);
+  const otherIdeas = state.ideas.filter(i => i.id !== idea.id && !idea.links.includes(i.id));
+
+  const menu = document.createElement('div');
+  menu.className = 'idea-context-menu links-menu';
+  menu.style.position = 'fixed';
+  menu.innerHTML = `
+    <div class="context-menu-header">Manage Links</div>
+    ${linkedIdeas.length > 0 ? `
+      <div class="context-menu-section">
+        <div class="context-menu-section-title">Linked Ideas</div>
+        ${linkedIdeas.map(linked => `
+          <div class="context-menu-item linked-item" data-link-id="${linked.id}">
+            <span class="menu-icon">🔗</span>
+            <span class="link-title">${escapeHtml(linked.title || 'Untitled')}</span>
+            <span class="remove-link" data-remove-id="${linked.id}">×</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '<div class="context-menu-empty">No linked ideas</div>'}
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-section">
+      <div class="context-menu-section-title">Add Link</div>
+      <select class="link-select" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-outline);">
+        <option value="">Select an idea...</option>
+        ${otherIdeas.map(i => `<option value="${i.id}">${escapeHtml(i.title || 'Untitled')}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  const rect = bubble.getBoundingClientRect();
+
+  menu.style.left = (rect.right + 10) + 'px';
+  menu.style.top = rect.top + 'px';
+
+  document.body.appendChild(menu);
+  canvasState.contextMenu = menu;
+  
+  menu.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    
+    const removeBtn = e.target.closest('.remove-link');
+    if (removeBtn) {
+      const linkId = removeBtn.dataset.removeId;
+      idea.links = idea.links.filter(id => id !== linkId);
+      const linkedIdea = state.ideas.find(i => i.id === linkId);
+      if (linkedIdea) {
+        linkedIdea.links = linkedIdea.links.filter(id => id !== idea.id);
+        await state.updateIdea(linkedIdea);
+      }
+      await state.updateIdea(idea);
+      showLinksContextMenu(bubble, idea, state);
+      return;
+    }
+    
+    const linkSelect = menu.querySelector('.link-select');
+    if (linkSelect && linkSelect.value) {
+      const targetId = linkSelect.value;
+      const targetIdea = state.ideas.find(i => i.id === targetId);
+      if (targetIdea) {
+        idea.links.push(targetId);
+        targetIdea.links.push(idea.id);
+        await state.updateIdea(idea);
+        await state.updateIdea(targetIdea);
+        showLinksContextMenu(bubble, idea, state);
+      }
+    }
+  });
+}
+
+function showSplitDialog(idea, state) {
+  const originalIdeas = idea.merged_from.map(id => state.ideas.find(i => i.id === id)).filter(Boolean);
+  if (originalIdeas.length === 0) {
+    alert('Cannot split: original ideas not found');
+    return;
+  }
+
+  const container = document.getElementById('modal-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="modal-overlay" id="split-modal">
+      <div class="modal-content" style="max-width: 500px;">
+        <h2 style="margin-bottom: 16px;">Split Merged Idea</h2>
+        <p style="color: var(--color-text-secondary); margin-bottom: 16px;">
+          This will restore the original ideas that were merged into "${escapeHtml(idea.title)}". The merged idea will be deleted.
+        </p>
+        <div style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
+          <strong>Original ideas to restore:</strong>
+          ${originalIdeas.map(i => `<div style="margin-top: 8px;">• ${escapeHtml(i.title || 'Untitled')}</div>`).join('')}
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="secondary" id="cancel-split">Cancel</button>
+          <button class="primary" id="confirm-split">Split</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('cancel-split').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+
+  document.getElementById('confirm-split').addEventListener('click', async () => {
+    await state.splitIdea(idea.id);
+    container.innerHTML = '';
+  });
+}
+
+function closeContextMenu() {
+  if (canvasState.contextMenu) {
+    canvasState.contextMenu.remove();
+    canvasState.contextMenu = null;
+  }
 }

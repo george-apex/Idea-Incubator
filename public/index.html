@@ -43,6 +43,7 @@
         <button class="quick-add-btn" id="quick-add-btn">Add</button>
       </div>
       <div class="bottom-actions">
+        <button class="secondary" id="ai-import-btn">AI Import</button>
         <button class="primary" id="create-idea-btn">+ New Idea</button>
       </div>
     </div>
@@ -50,6 +51,34 @@
 
   <div id="modal-container"></div>
 
-  <script type="module" src="../src/app/app.js"></script>
+  <script>
+    console.log('=== HTML SCRIPT LOADED ===');
+    console.log('DOM ready:', document.readyState);
+
+    window.addEventListener('error', function(e) {
+      console.error('=== GLOBAL ERROR ===', e.error);
+    });
+
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('=== UNHANDLED PROMISE REJECTION ===', e.reason);
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('=== DOM CONTENT LOADED ===');
+      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
+    });
+
+    window.addEventListener('load', function() {
+      console.log('=== WINDOW LOADED ===');
+      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
+    });
+  </script>
+  <script type="module" src="app.js"></script>
+  <script>
+    setTimeout(function() {
+      console.log('=== TIMEOUT CHECK ===');
+      console.log('ai-import-btn:', document.getElementById('ai-import-btn'));
+    }, 1000);
+  </script>
 </body>
 </html>

@@ -1,35 +1,12 @@
-console.log('=== APP.JS LOADING ===');
-console.trace('APP.JS TRACE');
-
-import { appState } from './state.js';
-console.log('=== IMPORTED STATE ===');
-
-import { renderSidebar } from '../ui/sidebar.js';
-console.log('=== IMPORTED SIDEBAR ===');
-
-import { renderIdeaDetail } from '../ui/idea_detail.js';
-console.log('=== IMPORTED IDEA_DETAIL ===');
-
-import { renderCanvas } from '../ui/canvas.js';
-console.log('=== IMPORTED CANVAS ===');
-
-import { showReviewModal } from '../ui/review_modal.js';
-console.log('=== IMPORTED REVIEW_MODAL ===');
-
-import { showAIImportDialog } from '../ui/ai_import.js';
-console.log('=== IMPORTED AI_IMPORT ===');
-
-import { exportToPideas, exportToMarkdown, importFromPideas, showImportDialog } from '../utils/export_import.js';
-console.log('=== IMPORTED EXPORT_IMPORT ===');
-
-import { bulkSaveIdeas } from '../db/idb.js';
-console.log('=== IMPORTED BULK_SAVE ===');
-
-import { generateUUID } from '../utils/uuid.js';
-console.log('=== IMPORTED UUID ===');
-
-console.log('=== IMPORTS COMPLETE ===');
-console.log('appState:', appState);
+import { appState } from '../src/app/state.js';
+import { renderSidebar } from '../src/ui/sidebar.js';
+import { renderIdeaDetail } from '../src/ui/idea_detail.js';
+import { renderCanvas } from '../src/ui/canvas.js';
+import { showReviewModal } from '../src/ui/review_modal.js';
+import { showAIImportDialog } from '../src/ui/ai_import.js';
+import { exportToPideas, exportToMarkdown, importFromPideas, showImportDialog } from '../src/utils/export_import.js';
+import { bulkSaveIdeas } from '../src/db/idb.js';
+import { generateUUID } from '../src/utils/uuid.js';
 
 let dueCheckInterval = null;
 
