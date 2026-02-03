@@ -342,10 +342,10 @@ class AppState {
     const count = ideas.length;
     const bubbleWidth = 260;
     const bubbleHeight = 160;
-    const horizontalGap = 80;
-    const verticalGap = 120;
-    const canvasWidth = 4000;
-    const canvasHeight = 3000;
+    const horizontalGap = 100;
+    const verticalGap = 150;
+    const canvasWidth = 5000;
+    const canvasHeight = 4000;
 
     if (count === 0) return [];
 
@@ -355,63 +355,111 @@ class AppState {
 
     const positions = new Map();
     const titleToIndex = new Map();
+    const titleToIdea = new Map();
     ideas.forEach((idea, index) => {
       titleToIndex.set(idea.title, index);
+      titleToIdea.set(idea.title, idea);
     });
 
-    const getChildren = (parentTitle) => {
+    const getDirectChildren = (parentTitle) => {
       return ideas.filter(idea => idea.parent === parentTitle);
     };
 
-    const getRelated = (title) => {
+    const getPeers = (title) => {
       return ideas.filter(idea => 
         idea.related_to && idea.related_to.includes(title)
       );
     };
 
-    const layoutTree = (parentTitle, x, y, availableWidth) => {
-      const children = getChildren(parentTitle);
-      const related = getRelated(parentTitle);
-      const allChildren = [...children, ...related];
+    const calculateDepth = (title, visited = new Set()) => {
+      if (visited.has(title)) return 0;
+      visited.add(title);
+      
+      const idea = titleToIdea.get(title);
+      if (!idea || !idea.parent) return 0;
+      
+      return 1 + calculateDepth(idea.parent, visited);
+    };
 
-      if (allChildren.length === 0) return;
+    const levels = new Map();
+    ideas.forEach(idea => {
+      const depth = calculateDepth(idea.title);
+      if (!levels.has(depth)) {
+        levels.set(depth, []);
+      }
+      levels.get(depth).push(idea);
+    });
 
-      const childWidth = bubbleWidth + horizontalGap;
-      const totalWidth = allChildren.length * childWidth;
-      const startX = x - totalWidth / 2 + childWidth / 2;
+    const maxDepth = Math.max(...levels.keys());
+    const levelHeight = (canvasHeight - 400) / (maxDepth + 1);
 
-      allChildren.forEach((child, index) => {
-        const childX = startX + index * childWidth;
-        const childY = y + bubbleHeight + verticalGap;
-        const childIndex = titleToIndex.get(child.title);
+    levels.forEach((levelIdeas, depth) => {
+      const y = 200 + depth * levelHeight;
+      const levelWidth = levelIdeas.length * (bubbleWidth + horizontalGap);
+      const startX = (canvasWidth - levelWidth) / 2 + horizontalGap / 2;
 
-        if (childIndex !== undefined && !positions.has(childIndex)) {
-          positions.set(childIndex, {
-            x: childX - bubbleWidth / 2,
-            y: childY
+      levelIdeas.forEach((idea, index) => {
+        const x = startX + index * (bubbleWidth + horizontalGap);
+        const ideaIndex = titleToIndex.get(idea.title);
+        
+        if (!positions.has(ideaIndex)) {
+          positions.set(ideaIndex, {
+            x: x - bubbleWidth / 2,
+            y: y
           });
-
-          layoutTree(child.title, childX, childY, childWidth);
         }
+      });
+    });
+
+    const adjustForParentChild = () => {
+      const processed = new Set();
+      
+      ideas.forEach(idea => {
+        if (processed.has(idea.title)) return;
+        
+        const children = getDirectChildren(idea.title);
+        if (children.length === 0) return;
+        
+        const parentIndex = titleToIndex.get(idea.title);
+        const parentPos = positions.get(parentIndex);
+        if (!parentPos) return;
+        
+        const parentCenterX = parentPos.x + bubbleWidth / 2;
+        const parentCenterY = parentPos.y + bubbleHeight / 2;
+        
+        const childPositions = children.map(child => {
+          const childIndex = titleToIndex.get(child.title);
+          return positions.get(childIndex);
+        }).filter(Boolean);
+        
+        if (childPositions.length === 0) return;
+        
+        const childrenCenterX = childPositions.reduce((sum, pos) => sum + pos.x + bubbleWidth / 2, 0) / childPositions.length;
+        const shiftX = parentCenterX - childrenCenterX;
+        
+        const shiftChildren = (childTitle, shift) => {
+          const childIndex = titleToIndex.get(childTitle);
+          if (!positions.has(childIndex)) return;
+          
+          const pos = positions.get(childIndex);
+          pos.x += shift;
+          
+          const grandchildren = getDirectChildren(childTitle);
+          grandchildren.forEach(gc => shiftChildren(gc.title, shift));
+        };
+        
+        children.forEach(child => {
+          if (!processed.has(child.title)) {
+            shiftChildren(child.title, shiftX);
+            processed.add(child.title);
+          }
+        });
+        
+        processed.add(idea.title);
       });
     };
 
-    const roots = ideas.filter(idea => !idea.parent && (!idea.related_to || idea.related_to.length === 0));
-    const rootSpacing = (canvasWidth - 200) / Math.max(roots.length, 1);
-    const rootStartX = 100 + rootSpacing / 2;
-
-    roots.forEach((root, index) => {
-      const rootX = rootStartX + index * rootSpacing;
-      const rootY = 200;
-      const rootIndex = titleToIndex.get(root.title);
-
-      positions.set(rootIndex, {
-        x: rootX - bubbleWidth / 2,
-        y: rootY
-      });
-
-      layoutTree(root.title, rootX, rootY, rootSpacing);
-    });
+    adjustForParentChild();
 
     const result = [];
     for (let i = 0; i < count; i++) {

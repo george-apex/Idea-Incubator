@@ -183,9 +183,17 @@ Example:
 
   document.getElementById('import-ideas').addEventListener('click', async () => {
     try {
+      const { resetCanvasState } = await import('./canvas.js');
+      resetCanvasState();
+      
       await state.importIdeasFromAI(generatedIdeas);
       state.setCurrentView('canvas');
       container.innerHTML = '';
+      
+      setTimeout(() => {
+        const { autoFitCanvas } = await import('./canvas.js');
+        autoFitCanvas(state);
+      }, 100);
     } catch (error) {
       showError(error.message || 'Failed to import ideas');
     }

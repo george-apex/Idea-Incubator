@@ -2,7 +2,7 @@ import { isIdeaDue } from '../models/idea.js';
 import { showReviewModal } from './review_modal.js';
 
 let canvasState = {
-  scale: 0.5,
+  scale: 1,
   offsetX: 0,
   offsetY: 0,
   isDragging: false,
@@ -108,12 +108,11 @@ export function renderCanvas(state) {
     requestAnimationFrame(() => {
       updateConnectionLines(state);
       updateMinimap(state);
-      autoFitCanvas(state);
     });
   });
 }
 
-function autoFitCanvas(state) {
+export function autoFitCanvas(state) {
   const ideas = state.getFilteredIdeas();
   if (ideas.length === 0) return;
 
@@ -150,6 +149,13 @@ function autoFitCanvas(state) {
   if (zoomLevel) {
     zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
   }
+}
+
+export function resetCanvasState() {
+  canvasState.scale = 1;
+  canvasState.offsetX = 0;
+  canvasState.offsetY = 0;
+}
 
   updateMinimap(state);
 }
