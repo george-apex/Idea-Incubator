@@ -15,7 +15,10 @@ export async function getAllIdeas() {
     const store = transaction.objectStore(STORES.ideas);
     const request = store.getAll();
     
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      console.log('DB - Loaded ideas from database:', request.result.map(i => ({ title: i.title, pos: i.canvas_pos })));
+      resolve(request.result);
+    };
     request.onerror = () => reject(request.error);
   });
 }

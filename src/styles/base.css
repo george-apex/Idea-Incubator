@@ -97,10 +97,10 @@ button:disabled {
 
 @keyframes bubbleFloat {
   0%, 100% {
-    transform: scale(1) rotate(0deg);
+    transform: scale(1);
   }
   50% {
-    transform: scale(1.01) rotate(0.3deg);
+    transform: scale(1.01);
   }
 }
 

@@ -5,12 +5,20 @@
   "main": "public/index.html",
   "scripts": {
     "start": "npx serve public -p 8080",
-    "dev": "npx serve public -p 8080"
+    "dev": "npx serve public -p 8080",
+    "proxy": "node proxy-server.js"
   },
-  "keywords": ["ideas", "productivity", "pwa"],
+  "keywords": [
+    "ideas",
+    "productivity",
+    "pwa"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "http-proxy-middleware": "^2.0.9",
     "serve": "^14.2.0"
   }
 }

@@ -1,4 +1,4 @@
-import { generateUUID } from '../utils/uuid.js';
+roimport { generateUUID } from '../utils/uuid.js';
 
 export const DEFAULT_STATUSES = ['Incubating', 'Exploring', 'Validating', 'Building', 'Shipped', 'Dropped'];
 

@@ -97,10 +97,10 @@ button:disabled {
 
 @keyframes bubbleFloat {
   0%, 100% {
-    transform: scale(1) rotate(0deg);
+    transform: scale(1);
   }
   50% {
-    transform: scale(1.01) rotate(0.3deg);
+    transform: scale(1.01);
   }
 }
 
@@ -968,6 +968,11 @@ body.glassy-mode button.active {
   padding: 4px 0;
   font-size: 13px;
   color: var(--color-text-primary);
+}
+
+.legend-item strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
 }
 
 .legend-divider {
