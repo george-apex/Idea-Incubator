@@ -27,6 +27,7 @@ class AppState {
 
   async init() {
     this.ideas = await getAllIdeas();
+    console.log('App init - Loaded ideas:', this.ideas.map(i => ({ title: i.title, pos: i.canvas_pos })));
     this.dueIdeas = await getDueIdeas();
     const savedSettings = await getSettings();
     this.settings = { ...this.settings, ...savedSettings };
@@ -122,6 +123,19 @@ class AppState {
       this.selectedIdeaId = null;
       this.currentView = 'canvas';
     }
+    this.notify();
+  }
+
+  async clearAllIdeas() {
+    const { deleteIdea: dbDeleteIdea } = await import('../db/idb.js');
+    
+    for (const idea of this.ideas) {
+      await dbDeleteIdea(idea.id);
+    }
+    
+    this.ideas = [];
+    this.selectedIdeaId = null;
+    this.currentView = 'canvas';
     this.notify();
   }
 
@@ -342,8 +356,8 @@ class AppState {
     const count = ideas.length;
     const bubbleWidth = 260;
     const bubbleHeight = 160;
-    const horizontalGap = 100;
-    const verticalGap = 150;
+    const horizontalGap = 80;
+    const verticalGap = 200;
     const canvasWidth = 5000;
     const canvasHeight = 4000;
 
@@ -353,125 +367,53 @@ class AppState {
       return [{ x: canvasWidth / 2 - bubbleWidth / 2, y: 200 }];
     }
 
-    const positions = new Map();
-    const titleToIndex = new Map();
     const titleToIdea = new Map();
-    ideas.forEach((idea, index) => {
-      titleToIndex.set(idea.title, index);
+    ideas.forEach((idea) => {
       titleToIdea.set(idea.title, idea);
     });
 
-    const getDirectChildren = (parentTitle) => {
-      return ideas.filter(idea => idea.parent === parentTitle);
-    };
+    const topLevelIdeas = ideas.filter(idea => !idea.parent);
 
-    const getPeers = (title) => {
-      return ideas.filter(idea => 
-        idea.related_to && idea.related_to.includes(title)
-      );
-    };
+    const positions = new Map();
+    let currentY = 200;
 
-    const calculateDepth = (title, visited = new Set()) => {
-      if (visited.has(title)) return 0;
-      visited.add(title);
-      
-      const idea = titleToIdea.get(title);
-      if (!idea || !idea.parent) return 0;
-      
-      return 1 + calculateDepth(idea.parent, visited);
-    };
+    topLevelIdeas.forEach((idea) => {
+      const children = ideas.filter(child => child.parent === idea.title);
+      const groupSize = 1 + children.length;
+      const groupWidth = groupSize * (bubbleWidth + horizontalGap) - horizontalGap;
+      const groupStartX = (canvasWidth - groupWidth) / 2;
 
-    const levels = new Map();
-    ideas.forEach(idea => {
-      const depth = calculateDepth(idea.title);
-      if (!levels.has(depth)) {
-        levels.set(depth, []);
-      }
-      levels.get(depth).push(idea);
-    });
+      const x = groupStartX;
+      const y = currentY;
+      positions.set(idea.title, { x, y });
 
-    const maxDepth = Math.max(...levels.keys());
-    const levelHeight = (canvasHeight - 400) / (maxDepth + 1);
+      if (children.length > 0) {
+        const childrenY = y + verticalGap;
+        const childrenWidth = children.length * (bubbleWidth + horizontalGap) - horizontalGap;
+        const childrenStartX = (canvasWidth - childrenWidth) / 2;
 
-    levels.forEach((levelIdeas, depth) => {
-      const y = 200 + depth * levelHeight;
-      const levelWidth = levelIdeas.length * (bubbleWidth + horizontalGap);
-      const startX = (canvasWidth - levelWidth) / 2 + horizontalGap / 2;
-
-      levelIdeas.forEach((idea, index) => {
-        const x = startX + index * (bubbleWidth + horizontalGap);
-        const ideaIndex = titleToIndex.get(idea.title);
-        
-        if (!positions.has(ideaIndex)) {
-          positions.set(ideaIndex, {
-            x: x - bubbleWidth / 2,
-            y: y
-          });
-        }
-      });
-    });
-
-    const adjustForParentChild = () => {
-      const processed = new Set();
-      
-      ideas.forEach(idea => {
-        if (processed.has(idea.title)) return;
-        
-        const children = getDirectChildren(idea.title);
-        if (children.length === 0) return;
-        
-        const parentIndex = titleToIndex.get(idea.title);
-        const parentPos = positions.get(parentIndex);
-        if (!parentPos) return;
-        
-        const parentCenterX = parentPos.x + bubbleWidth / 2;
-        const parentCenterY = parentPos.y + bubbleHeight / 2;
-        
-        const childPositions = children.map(child => {
-          const childIndex = titleToIndex.get(child.title);
-          return positions.get(childIndex);
-        }).filter(Boolean);
-        
-        if (childPositions.length === 0) return;
-        
-        const childrenCenterX = childPositions.reduce((sum, pos) => sum + pos.x + bubbleWidth / 2, 0) / childPositions.length;
-        const shiftX = parentCenterX - childrenCenterX;
-        
-        const shiftChildren = (childTitle, shift) => {
-          const childIndex = titleToIndex.get(childTitle);
-          if (!positions.has(childIndex)) return;
-          
-          const pos = positions.get(childIndex);
-          pos.x += shift;
-          
-          const grandchildren = getDirectChildren(childTitle);
-          grandchildren.forEach(gc => shiftChildren(gc.title, shift));
-        };
-        
-        children.forEach(child => {
-          if (!processed.has(child.title)) {
-            shiftChildren(child.title, shiftX);
-            processed.add(child.title);
-          }
+        children.forEach((child, childIndex) => {
+          const childX = childrenStartX + childIndex * (bubbleWidth + horizontalGap);
+          positions.set(child.title, { x: childX, y: childrenY });
         });
-        
-        processed.add(idea.title);
-      });
-    };
 
-    adjustForParentChild();
+        currentY = childrenY + verticalGap + 100;
+      } else {
+        currentY = y + verticalGap + 100;
+      }
+    });
 
     const result = [];
-    for (let i = 0; i < count; i++) {
-      if (positions.has(i)) {
-        result.push(positions.get(i));
+    ideas.forEach(idea => {
+      if (positions.has(idea.title)) {
+        result.push(positions.get(idea.title));
       } else {
         result.push({
           x: Math.random() * (canvasWidth - bubbleWidth - 100) + 50,
           y: Math.random() * (canvasHeight - bubbleHeight - 100) + 50
         });
       }
-    }
+    });
 
     return result;
   }

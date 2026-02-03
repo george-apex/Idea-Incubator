@@ -37,6 +37,7 @@ export function renderCanvas(state) {
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
         <button class="secondary" id="toggle-legend">Legend</button>
+        <button class="secondary" id="fit-view">Fit View</button>
         <button class="secondary" id="reset-view">Reset View</button>
       </div>
     </div>
@@ -64,33 +65,6 @@ export function renderCanvas(state) {
         <div class="minimap" id="minimap">
           <div class="minimap-content" id="minimap-content"></div>
           <div class="minimap-viewport" id="minimap-viewport"></div>
-        </div>
-        <div class="link-legend" id="link-legend" style="display: none;">
-          <div class="legend-title">Link Types</div>
-          <div class="legend-item">
-            <svg width="40" height="20" style="display: inline-block; vertical-align: middle;">
-              <line x1="0" y1="10" x2="40" y2="10" stroke="#8b7355" stroke-width="3" />
-              <polygon points="35,6 40,10 35,14" fill="#8b7355" />
-            </svg>
-            <span>Parent → Child</span>
-          </div>
-          <div class="legend-item">
-            <svg width="40" height="20" style="display: inline-block; vertical-align: middle;">
-              <line x1="0" y1="10" x2="40" y2="10" stroke="#d4a574" stroke-width="2" stroke-dasharray="5,5" />
-            </svg>
-            <span>Peer Connection</span>
-          </div>
-          <div class="legend-divider"></div>
-          <div class="legend-title">View Controls</div>
-          <div class="legend-item">
-            <span>Drag to pan</span>
-          </div>
-          <div class="legend-item">
-            <span>Scroll to zoom</span>
-          </div>
-          <div class="legend-item">
-            <span>Click minimap to navigate</span>
-          </div>
         </div>
         <div class="link-legend" id="link-legend" style="display: none;">
           <div class="legend-title">Link Types</div>
@@ -508,6 +482,13 @@ function attachCanvasListeners(state) {
     });
   }
 
+  const fitViewBtn = document.getElementById('fit-view');
+  if (fitViewBtn) {
+    fitViewBtn.addEventListener('click', () => {
+      autoFitCanvas(state);
+    });
+  }
+
   const linkModeBtn = document.getElementById('link-mode-btn');
   if (linkModeBtn) {
     linkModeBtn.addEventListener('click', () => {
@@ -604,14 +585,25 @@ function attachCanvasListeners(state) {
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
       
+      const ideas = state.getFilteredIdeas();
+      if (ideas.length === 0) return;
+      
+      const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+      const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+      const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+      const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+      
+      const contentWidth = maxX - minX + 100;
+      const contentHeight = maxY - minY + 100;
+      
+      const contentX = minX + x * contentWidth;
+      const contentY = minY + y * contentHeight;
+      
       const canvas = document.getElementById('bubble-canvas');
       if (canvas) {
         const canvasRect = canvas.getBoundingClientRect();
-        const targetX = -x * canvasRect.width / canvasState.scale + canvasRect.width / 2;
-        const targetY = -y * canvasRect.height / canvasState.scale + canvasRect.height / 2;
-        
-        canvasState.offsetX = targetX;
-        canvasState.offsetY = targetY;
+        canvasState.offsetX = canvasRect.width / 2 - contentX * canvasState.scale;
+        canvasState.offsetY = canvasRect.height / 2 - contentY * canvasState.scale;
         
         const canvasContainer = document.getElementById('canvas-container');
         if (canvasContainer) {

@@ -31,6 +31,7 @@ function setupEventListeners() {
   const exportBtn = document.getElementById('export-btn');
   const importBtn = document.getElementById('import-btn');
   const settingsBtn = document.getElementById('settings-btn');
+  const clearCanvasBtn = document.getElementById('clear-canvas-btn');
   const dueCounter = document.getElementById('due-counter');
 
   if (searchBox) {
@@ -97,6 +98,12 @@ function setupEventListeners() {
   if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
       showSettingsDialog();
+    });
+  }
+
+  if (clearCanvasBtn) {
+    clearCanvasBtn.addEventListener('click', () => {
+      showClearCanvasDialog();
     });
   }
 
@@ -170,6 +177,44 @@ async function handleImport(data, resolution) {
   alert(`Imported ${ideasToImport.length} idea(s)`);
 }
 
+function showClearCanvasDialog() {
+  const container = document.getElementById('modal-container');
+  if (!container) return;
+
+  const ideaCount = appState.ideas.filter(i => !i.is_archived).length;
+
+  container.innerHTML = `
+    <div class="modal-overlay" id="clear-canvas-modal">
+      <div class="modal-content" style="max-width: 450px;">
+        <h2 style="margin-bottom: 16px;">Clear Canvas</h2>
+        <p style="color: var(--color-text-secondary); margin-bottom: 16px;">
+          Are you sure you want to clear the canvas? This will delete all <strong>${ideaCount}</strong> idea(s).
+        </p>
+        <p style="color: #dc2626; margin-bottom: 24px; font-size: 14px;">
+          Warning: This action cannot be undone. All ideas will be permanently deleted.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="secondary" id="cancel-clear">Cancel</button>
+          <button class="primary" id="confirm-clear" style="background-color: #dc2626; border-color: #dc2626;">Clear All Ideas</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('cancel-clear').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+
+  document.getElementById('confirm-clear').addEventListener('click', async () => {
+    try {
+      await appState.clearAllIdeas();
+      container.innerHTML = '';
+    } catch (error) {
+      alert('Failed to clear canvas: ' + error.message);
+    }
+  });
+}
+
 function showSettingsDialog() {
   const container = document.getElementById('modal-container');
   if (!container) return;
@@ -189,17 +234,13 @@ function showSettingsDialog() {
         </div>
 
         <div style="margin-bottom: 16px;">
-          <label for="setting-float" style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
-            <span style="font-size: 14px; font-weight: 500;">Bubble Float Animation</span>
-          </label>
+          <label for="setting-float" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Bubble Float Animation</label>
+          <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
         </div>
 
         <div style="margin-bottom: 16px;">
-          <label for="setting-glassy" style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
-            <span style="font-size: 14px; font-weight: 500;">Glassy Aesthetic</span>
-          </label>
+          <label for="setting-glassy" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Glassy Aesthetic</label>
+          <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
         </div>
 
         <div style="margin-bottom: 16px;">

@@ -12,7 +12,7 @@ export function renderSidebar(state) {
     <div class="sidebar-header">
       <div class="sidebar-filters">
         <div class="filter-group">
-          <label class="filter-label">Status</label>
+          <label class="filter-label" for="filter-status">Status</label>
           <select class="filter-select" id="filter-status">
             <option value="all" ${state.filterStatus === 'all' ? 'selected' : ''}>All Statuses</option>
             ${statuses.map(status => `
@@ -21,7 +21,7 @@ export function renderSidebar(state) {
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Category</label>
+          <label class="filter-label" for="filter-category">Category</label>
           <select class="filter-select" id="filter-category">
             <option value="all" ${state.filterCategory === 'all' ? 'selected' : ''}>All Categories</option>
             ${categories.map(cat => `
@@ -30,16 +30,12 @@ export function renderSidebar(state) {
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label">
-            <input type="checkbox" id="filter-due" ${state.filterDueOnly ? 'checked' : ''}>
-            Due Only
-          </label>
+          <label class="filter-label" for="filter-due">Due Only</label>
+          <input type="checkbox" id="filter-due" ${state.filterDueOnly ? 'checked' : ''}>
         </div>
         <div class="filter-group">
-          <label class="filter-label">
-            <input type="checkbox" id="filter-archived" ${state.filterArchived ? 'checked' : ''}>
-            Show Archived
-          </label>
+          <label class="filter-label" for="filter-archived">Show Archived</label>
+          <input type="checkbox" id="filter-archived" ${state.filterArchived ? 'checked' : ''}>
         </div>
       </div>
     </div>

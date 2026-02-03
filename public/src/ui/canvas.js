@@ -18,7 +18,8 @@ let canvasState = {
   selectedLink: null,
   mergeMode: false,
   mergeSourceBubble: null,
-  contextMenu: null
+  contextMenu: null,
+  selectedLayout: 'row'
 };
 
 export function renderCanvas(state) {
@@ -33,12 +34,18 @@ export function renderCanvas(state) {
         <button class="panel-tab" data-view="detail">Detail</button>
         <button class="panel-tab active" data-view="canvas">Canvas</button>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <select id="layout-type" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--color-outline); background: var(--color-bg); color: var(--color-text); font-size: 14px;">
+          <option value="row" ${canvasState.selectedLayout === 'row' ? 'selected' : ''}>Row Layout</option>
+          <option value="radial" ${canvasState.selectedLayout === 'radial' ? 'selected' : ''}>Radial Layout</option>
+          <option value="vessel" ${canvasState.selectedLayout === 'vessel' ? 'selected' : ''}>Branching Layout</option>
+        </select>
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
         <button class="secondary" id="toggle-legend">Legend</button>
         <button class="secondary" id="fit-view">Fit View</button>
         <button class="secondary" id="reset-view">Reset View</button>
+        <button class="secondary" id="relayout-btn">Apply Layout</button>
       </div>
     </div>
     <div class="panel-content">
@@ -80,6 +87,17 @@ export function renderCanvas(state) {
               <line x1="0" y1="10" x2="40" y2="10" stroke="#d4a574" stroke-width="2" stroke-dasharray="5,5" />
             </svg>
             <span>Peer Connection</span>
+          </div>
+          <div class="legend-divider"></div>
+          <div class="legend-title">Layout Types</div>
+          <div class="legend-item">
+            <strong>Row:</strong> Trees arranged in rows, left to right
+          </div>
+          <div class="legend-item">
+            <strong>Radial:</strong> Two concentric rings, parents in inner circle, children in outer circle
+          </div>
+          <div class="legend-item">
+            <strong>Branching:</strong> Concentric circles, each depth level forms a ring around center
           </div>
           <div class="legend-divider"></div>
           <div class="legend-title">View Controls</div>
@@ -171,8 +189,8 @@ function renderConnectionLines(ideas) {
           if (linkedIdea) {
             const isParentChild = idea.parent_id === linkId || linkedIdea.parent_id === idea.id;
             lines.push({
-              from: idea.canvas_pos,
-              to: linkedIdea.canvas_pos,
+              from: idea,
+              to: linkedIdea,
               isParentChild
             });
           }
@@ -193,10 +211,10 @@ function renderConnectionLines(ideas) {
       x2 = toBubble.offsetLeft + toBubble.offsetWidth / 2 + 5000;
       y2 = toBubble.offsetTop + toBubble.offsetHeight / 2 + 5000;
     } else {
-      x1 = line.from.x + 130 + 5000;
-      y1 = line.from.y + 80 + 5000;
-      x2 = line.to.x + 130 + 5000;
-      y2 = line.to.y + 80 + 5000;
+      x1 = line.from.canvas_pos.x + 130 + 5000;
+      y1 = line.from.canvas_pos.y + 80 + 5000;
+      x2 = line.to.canvas_pos.x + 130 + 5000;
+      y2 = line.to.canvas_pos.y + 80 + 5000;
     }
     
     const linkKey = [line.from.id, line.to.id].sort().join('-');
@@ -668,6 +686,49 @@ function attachCanvasListeners(state) {
       }
     });
   }
+
+  const relayoutBtn = document.getElementById('relayout-btn');
+  if (relayoutBtn) {
+    relayoutBtn.addEventListener('click', async () => {
+      const layoutType = document.getElementById('layout-type').value;
+      canvasState.selectedLayout = layoutType;
+      await relayoutIdeas(state, layoutType);
+    });
+  }
+}
+
+async function relayoutIdeas(state, layoutType = 'force') {
+  const ideas = state.getFilteredIdeas();
+  if (ideas.length === 0) return;
+
+  const positions = state.generateLayoutPositions(ideas, layoutType);
+  const bubbles = document.querySelectorAll('.idea-bubble');
+
+  bubbles.forEach(bubble => {
+    bubble.style.transition = 'left 0.5s ease-out, top 0.5s ease-out';
+  });
+
+  for (let i = 0; i < ideas.length; i++) {
+    const bubble = document.querySelector(`.idea-bubble[data-id="${ideas[i].id}"]`);
+    if (bubble) {
+      bubble.style.left = positions[i].x + 'px';
+      bubble.style.top = positions[i].y + 'px';
+    }
+    ideas[i].canvas_pos = positions[i];
+    await state.updateIdea(ideas[i]);
+  }
+
+  setTimeout(() => {
+    bubbles.forEach(bubble => {
+      bubble.style.transition = '';
+    });
+    updateConnectionLines(state);
+  }, 500);
+
+  resetCanvasState();
+  autoFitCanvas(state);
+
+  state.notify();
 }
 
 function updateMinimap(state) {

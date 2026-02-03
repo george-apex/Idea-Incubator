@@ -162,8 +162,18 @@ Example:
       const response = await aiService.generateIdeasFromNotes(notes);
       generatedIdeas = response.ideas || [];
 
+      console.log('Generated Ideas:', generatedIdeas);
+
       if (generatedIdeas.length === 0) {
         showError('No ideas were generated. Please try with more detailed notes.');
+        return;
+      }
+
+      // Validate generated ideas structure
+      const invalidIdeas = generatedIdeas.filter(idea => !idea.title);
+      if (invalidIdeas.length > 0) {
+        console.error('Invalid ideas generated:', invalidIdeas);
+        showError('Some generated ideas are missing required fields. Please try again.');
         return;
       }
 
@@ -173,6 +183,7 @@ Example:
       document.getElementById('import-ideas').style.display = 'inline-block';
 
     } catch (error) {
+      console.error('AI Import Error:', error);
       showError(error.message || 'Failed to generate ideas. Please check your API key and try again.');
     } finally {
       loadingEl.style.display = 'none';
