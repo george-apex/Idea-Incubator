@@ -118,17 +118,18 @@ function renderConnectionLines(ideas) {
   const processedLinks = new Set();
 
   ideas.forEach(idea => {
+    if (!idea || !idea.id) return;
     if (idea.links && idea.links.length > 0) {
       idea.links.forEach(linkId => {
         const linkKey = [idea.id, linkId].sort().join('-');
         if (!processedLinks.has(linkKey)) {
           processedLinks.add(linkKey);
           const linkedIdea = ideas.find(i => i.id === linkId);
-          if (linkedIdea) {
+          if (linkedIdea && linkedIdea.id) {
             const isParentChild = idea.parent_id === linkId || linkedIdea.parent_id === idea.id;
             lines.push({
-              from: idea.canvas_pos,
-              to: linkedIdea.canvas_pos,
+              from: idea,
+              to: linkedIdea,
               isParentChild
             });
           }
@@ -149,10 +150,12 @@ function renderConnectionLines(ideas) {
       x2 = toBubble.offsetLeft + toBubble.offsetWidth / 2 + 5000;
       y2 = toBubble.offsetTop + toBubble.offsetHeight / 2 + 5000;
     } else {
-      x1 = line.from.x + 130 + 5000;
-      y1 = line.from.y + 80 + 5000;
-      x2 = line.to.x + 130 + 5000;
-      y2 = line.to.y + 80 + 5000;
+      const fromPos = line.from.canvas_pos || { x: 0, y: 0 };
+      const toPos = line.to.canvas_pos || { x: 0, y: 0 };
+      x1 = fromPos.x + 130 + 5000;
+      y1 = fromPos.y + 80 + 5000;
+      x2 = toPos.x + 130 + 5000;
+      y2 = toPos.y + 80 + 5000;
     }
     
     const linkKey = [line.from.id, line.to.id].sort().join('-');
@@ -181,13 +184,14 @@ function updateConnectionLines(state) {
   const processedLinks = new Set();
 
   ideas.forEach(idea => {
+    if (!idea || !idea.id) return;
     if (idea.links && idea.links.length > 0) {
       idea.links.forEach(linkId => {
         const linkKey = [idea.id, linkId].sort().join('-');
         if (!processedLinks.has(linkKey)) {
           processedLinks.add(linkKey);
           const linkedIdea = ideas.find(i => i.id === linkId);
-          if (linkedIdea) {
+          if (linkedIdea && linkedIdea.id) {
             const fromBubble = document.querySelector(`.idea-bubble[data-id="${idea.id}"]`);
             const toBubble = document.querySelector(`.idea-bubble[data-id="${linkId}"]`);
             
@@ -253,10 +257,11 @@ function renderBubble(idea, state) {
   const bubbleClass = `bubble bubble-${idea.color_variant} ${state.settings.bubbleFloat ? 'bubble-float' : ''} ${isAISuggestion ? 'ai-suggestion-bubble' : ''}`;
   const animationDelay = (parseInt(idea.id.slice(-8), 16) % 6000) / 1000;
 
+  const pos = idea.canvas_pos || { x: 0, y: 0 };
   return `
     <div class="idea-bubble ${bubbleClass} ${isMerged ? 'merged-bubble' : ''}"
          data-id="${idea.id}"
-         style="left: ${idea.canvas_pos.x}px; top: ${idea.canvas_pos.y}px; animation-delay: ${animationDelay}s;">
+         style="left: ${pos.x}px; top: ${pos.y}px; animation-delay: ${animationDelay}s;">
       ${isDue ? '<div class="due-indicator"></div>' : ''}
       ${isAISuggestion ? '<div class="ai-suggestion-badge"></div>' : ''}
       <div class="idea-bubble-quick-actions">
@@ -672,15 +677,18 @@ function updateMinimap(state) {
   
   const canvasRect = canvas.getBoundingClientRect();
   
-  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
-  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
-  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
-  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+  const validIdeas = ideas.filter(i => i.canvas_pos && i.canvas_pos.x !== undefined && i.canvas_pos.y !== undefined);
+  if (validIdeas.length === 0) return;
+  
+  const minX = Math.min(...validIdeas.map(i => i.canvas_pos.x));
+  const maxX = Math.max(...validIdeas.map(i => i.canvas_pos.x + 260));
+  const minY = Math.min(...validIdeas.map(i => i.canvas_pos.y));
+  const maxY = Math.max(...validIdeas.map(i => i.canvas_pos.y + 160));
   
   const width = maxX - minX + 100;
   const height = maxY - minY + 100;
   
-  minimapContent.innerHTML = ideas.map(idea => {
+  minimapContent.innerHTML = validIdeas.map(idea => {
     const x = ((idea.canvas_pos.x - minX) / width) * 100;
     const y = ((idea.canvas_pos.y - minY) / height) * 100;
     const w = (260 / width) * 100;
@@ -995,11 +1003,11 @@ function showLayoutDialog(state) {
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Layout Algorithm</label>
           <select id="layout-algorithm" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-outline);">
+            <option value="layered">Layered (Sugiyama-style)</option>
             <option value="force-directed">Force-Directed (Organic)</option>
             <option value="hierarchical">Hierarchical (Tree)</option>
             <option value="circular-ordered">Circular (By Connections)</option>
             <option value="grid">Grid (Organized)</option>
-            <option value="layered">Layered (Sugiyama-style)</option>
             <option value="hybrid">Hybrid (Cluster-based)</option>
             <option value="status">Status (Kanban-style)</option>
             <option value="confidence">Confidence (Low to High)</option>
@@ -1029,7 +1037,7 @@ function showLayoutDialog(state) {
   const spacingValue = document.getElementById('spacing-value');
 
   if (algorithmSelect) {
-    algorithmSelect.value = state.currentLayoutAlgorithm || 'force-directed';
+    algorithmSelect.value = state.currentLayoutAlgorithm || 'layered';
   }
 
   if (spacingSlider) {

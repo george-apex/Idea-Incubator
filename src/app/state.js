@@ -12,7 +12,7 @@ class AppState {
     this.filterDueOnly = false;
     this.filterArchived = false;
     this.dueIdeas = [];
-    this.currentLayoutAlgorithm = 'force-directed';
+    this.currentLayoutAlgorithm = 'layered';
     this.currentLayoutSpacing = 150;
     this.settings = {
       bubbleFloat: true,
@@ -350,7 +350,7 @@ class AppState {
       await saveIdea(createdIdea);
     }
 
-    const positions = this.generateLayoutPositions(createdIdeas, 'layered', 150);
+    const positions = await this.generateLayoutPositions(createdIdeas, 'layered', 150);
     for (let i = 0; i < createdIdeas.length; i++) {
       createdIdeas[i].canvas_pos = positions[i];
       await saveIdea(createdIdeas[i]);
