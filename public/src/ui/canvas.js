@@ -18,8 +18,7 @@ let canvasState = {
   selectedLink: null,
   mergeMode: false,
   mergeSourceBubble: null,
-  contextMenu: null,
-  selectedLayout: 'row'
+  contextMenu: null
 };
 
 export function renderCanvas(state) {
@@ -34,18 +33,13 @@ export function renderCanvas(state) {
         <button class="panel-tab" data-view="detail">Detail</button>
         <button class="panel-tab active" data-view="canvas">Canvas</button>
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <select id="layout-type" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--color-outline); background: var(--color-bg); color: var(--color-text); font-size: 14px;">
-          <option value="row" ${canvasState.selectedLayout === 'row' ? 'selected' : ''}>Row Layout</option>
-          <option value="radial" ${canvasState.selectedLayout === 'radial' ? 'selected' : ''}>Radial Layout</option>
-          <option value="vessel" ${canvasState.selectedLayout === 'vessel' ? 'selected' : ''}>Branching Layout</option>
-        </select>
+      <div style="display: flex; gap: 8px;">
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
+        <button class="secondary" id="auto-layout">Auto Layout</button>
         <button class="secondary" id="toggle-legend">Legend</button>
         <button class="secondary" id="fit-view">Fit View</button>
         <button class="secondary" id="reset-view">Reset View</button>
-        <button class="secondary" id="relayout-btn">Apply Layout</button>
       </div>
     </div>
     <div class="panel-content">
@@ -89,17 +83,6 @@ export function renderCanvas(state) {
             <span>Peer Connection</span>
           </div>
           <div class="legend-divider"></div>
-          <div class="legend-title">Layout Types</div>
-          <div class="legend-item">
-            <strong>Row:</strong> Trees arranged in rows, left to right
-          </div>
-          <div class="legend-item">
-            <strong>Radial:</strong> Two concentric rings, parents in inner circle, children in outer circle
-          </div>
-          <div class="legend-item">
-            <strong>Branching:</strong> Concentric circles, each depth level forms a ring around center
-          </div>
-          <div class="legend-divider"></div>
           <div class="legend-title">View Controls</div>
           <div class="legend-item">
             <span>Drag to pan</span>
@@ -130,51 +113,6 @@ export function renderCanvas(state) {
   });
 }
 
-export function autoFitCanvas(state) {
-  const ideas = state.getFilteredIdeas();
-  if (ideas.length === 0) return;
-
-  const canvas = document.getElementById('bubble-canvas');
-  if (!canvas) return;
-
-  const canvasRect = canvas.getBoundingClientRect();
-  
-  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
-  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
-  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
-  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
-
-  const contentWidth = maxX - minX;
-  const contentHeight = maxY - minY;
-  const contentCenterX = minX + contentWidth / 2;
-  const contentCenterY = minY + contentHeight / 2;
-
-  const padding = 100;
-  const scaleX = (canvasRect.width - padding * 2) / contentWidth;
-  const scaleY = (canvasRect.height - padding * 2) / contentHeight;
-  const newScale = Math.min(scaleX, scaleY, 1);
-
-  canvasState.scale = newScale;
-  canvasState.offsetX = canvasRect.width / 2 - contentCenterX * newScale;
-  canvasState.offsetY = canvasRect.height / 2 - contentCenterY * newScale;
-
-  const canvasContainer = document.getElementById('canvas-container');
-  if (canvasContainer) {
-    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
-  }
-
-  const zoomLevel = document.getElementById('zoom-level');
-  if (zoomLevel) {
-    zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
-  }
-}
-
-export function resetCanvasState() {
-  canvasState.scale = 1;
-  canvasState.offsetX = 0;
-  canvasState.offsetY = 0;
-}
-
 function renderConnectionLines(ideas) {
   const lines = [];
   const processedLinks = new Set();
@@ -189,8 +127,8 @@ function renderConnectionLines(ideas) {
           if (linkedIdea) {
             const isParentChild = idea.parent_id === linkId || linkedIdea.parent_id === idea.id;
             lines.push({
-              from: idea,
-              to: linkedIdea,
+              from: idea.canvas_pos,
+              to: linkedIdea.canvas_pos,
               isParentChild
             });
           }
@@ -211,10 +149,10 @@ function renderConnectionLines(ideas) {
       x2 = toBubble.offsetLeft + toBubble.offsetWidth / 2 + 5000;
       y2 = toBubble.offsetTop + toBubble.offsetHeight / 2 + 5000;
     } else {
-      x1 = line.from.canvas_pos.x + 130 + 5000;
-      y1 = line.from.canvas_pos.y + 80 + 5000;
-      x2 = line.to.canvas_pos.x + 130 + 5000;
-      y2 = line.to.canvas_pos.y + 80 + 5000;
+      x1 = line.from.x + 130 + 5000;
+      y1 = line.from.y + 80 + 5000;
+      x2 = line.to.x + 130 + 5000;
+      y2 = line.to.y + 80 + 5000;
     }
     
     const linkKey = [line.from.id, line.to.id].sort().join('-');
@@ -311,7 +249,8 @@ function updateConnectionLines(state) {
 function renderBubble(idea, state) {
   const isDue = isIdeaDue(idea);
   const isMerged = idea.merged_from && idea.merged_from.length > 0;
-  const bubbleClass = `bubble bubble-${idea.color_variant} ${state.settings.bubbleFloat ? 'bubble-float' : ''}`;
+  const isAISuggestion = idea.is_ai_suggestion;
+  const bubbleClass = `bubble bubble-${idea.color_variant} ${state.settings.bubbleFloat ? 'bubble-float' : ''} ${isAISuggestion ? 'ai-suggestion-bubble' : ''}`;
   const animationDelay = (parseInt(idea.id.slice(-8), 16) % 6000) / 1000;
 
   return `
@@ -319,14 +258,26 @@ function renderBubble(idea, state) {
          data-id="${idea.id}"
          style="left: ${idea.canvas_pos.x}px; top: ${idea.canvas_pos.y}px; animation-delay: ${animationDelay}s;">
       ${isDue ? '<div class="due-indicator"></div>' : ''}
+      ${isAISuggestion ? '<div class="ai-suggestion-badge"></div>' : ''}
       <div class="idea-bubble-quick-actions">
-        <button class="quick-action-btn" data-action="edit" title="Edit">✎</button>
-        <button class="quick-action-btn" data-action="link" title="Link">🔗</button>
+        ${isAISuggestion ? `
+          <button class="quick-action-btn suggestion-accept" data-action="accept-suggestion" title="Accept">✓</button>
+          <button class="quick-action-btn suggestion-dismiss" data-action="dismiss-suggestion" title="Dismiss">✕</button>
+        ` : `
+          <button class="quick-action-btn" data-action="edit" title="Edit">✎</button>
+          <button class="quick-action-btn" data-action="link" title="Link">🔗</button>
+        `}
       </div>
       <div class="idea-bubble-title">${escapeHtml(idea.title || 'Untitled Idea')}</div>
+      ${isAISuggestion && idea.suggestion_type ? `
+        <div class="ai-suggestion-type">${escapeHtml(getSuggestionTypeLabel(idea.suggestion_type))}</div>
+      ` : ''}
       <div class="idea-bubble-meta">
         <span class="status-pill">${escapeHtml(idea.status)}</span>
       </div>
+      ${isAISuggestion && idea.suggestion_reason ? `
+        <div class="ai-suggestion-reason">${escapeHtml(idea.suggestion_reason)}</div>
+      ` : ''}
       <div class="confidence-ring" style="--confidence-color: var(--color-bubble-${idea.color_variant}); --confidence-percent: ${idea.confidence}%;">
         <div class="confidence-ring-progress"></div>
         <span>${idea.confidence}</span>
@@ -334,6 +285,16 @@ function renderBubble(idea, state) {
       ${isMerged ? '<div class="merged-badge">Merged</div>' : ''}
     </div>
   `;
+}
+
+function getSuggestionTypeLabel(type) {
+  const labels = {
+    'improvement': '💡 Improvement',
+    'connection': '🔗 Connection',
+    'new_idea': '✨ New Idea',
+    'merge': '🔀 Merge'
+  };
+  return labels[type] || '✨ Suggestion';
 }
 
 function attachCanvasListeners(state) {
@@ -458,6 +419,10 @@ function attachCanvasListeners(state) {
           state.setSelectedIdeaId(ideaId);
         } else if (action === 'link') {
           showLinkDialog(state, ideaId);
+        } else if (action === 'accept-suggestion') {
+          acceptSuggestion(ideaId, state);
+        } else if (action === 'dismiss-suggestion') {
+          dismissSuggestion(ideaId, state);
         }
       } else if (!canvasState.bubbleWasMoved) {
         if (canvasState.linkMode) {
@@ -606,6 +571,13 @@ function attachCanvasListeners(state) {
       }
     });
   }
+
+  const autoLayoutBtn = document.getElementById('auto-layout');
+  if (autoLayoutBtn) {
+    autoLayoutBtn.addEventListener('click', async () => {
+      showLayoutDialog(state);
+    });
+  }
   
   document.addEventListener('keydown', async (e) => {
     if (canvasState.linkMode && canvasState.selectedLink && (e.key === 'Delete' || e.key === 'Backspace')) {
@@ -686,49 +658,6 @@ function attachCanvasListeners(state) {
       }
     });
   }
-
-  const relayoutBtn = document.getElementById('relayout-btn');
-  if (relayoutBtn) {
-    relayoutBtn.addEventListener('click', async () => {
-      const layoutType = document.getElementById('layout-type').value;
-      canvasState.selectedLayout = layoutType;
-      await relayoutIdeas(state, layoutType);
-    });
-  }
-}
-
-async function relayoutIdeas(state, layoutType = 'force') {
-  const ideas = state.getFilteredIdeas();
-  if (ideas.length === 0) return;
-
-  const positions = state.generateLayoutPositions(ideas, layoutType);
-  const bubbles = document.querySelectorAll('.idea-bubble');
-
-  bubbles.forEach(bubble => {
-    bubble.style.transition = 'left 0.5s ease-out, top 0.5s ease-out';
-  });
-
-  for (let i = 0; i < ideas.length; i++) {
-    const bubble = document.querySelector(`.idea-bubble[data-id="${ideas[i].id}"]`);
-    if (bubble) {
-      bubble.style.left = positions[i].x + 'px';
-      bubble.style.top = positions[i].y + 'px';
-    }
-    ideas[i].canvas_pos = positions[i];
-    await state.updateIdea(ideas[i]);
-  }
-
-  setTimeout(() => {
-    bubbles.forEach(bubble => {
-      bubble.style.transition = '';
-    });
-    updateConnectionLines(state);
-  }, 500);
-
-  resetCanvasState();
-  autoFitCanvas(state);
-
-  state.notify();
 }
 
 function updateMinimap(state) {
@@ -1052,9 +981,120 @@ function showSplitDialog(idea, state) {
   });
 }
 
+function showLayoutDialog(state) {
+  const container = document.getElementById('modal-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="modal-overlay" id="layout-modal">
+      <div class="modal-content" style="max-width: 450px;">
+        <h2 style="margin-bottom: 16px;">Auto Layout</h2>
+        <p style="color: var(--color-text-secondary); margin-bottom: 20px;">
+          Choose a layout algorithm to automatically arrange your ideas on the canvas.
+        </p>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Layout Algorithm</label>
+          <select id="layout-algorithm" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-outline);">
+            <option value="force-directed">Force-Directed (Organic)</option>
+            <option value="hierarchical">Hierarchical (Tree)</option>
+            <option value="circular">Circular (Radial)</option>
+            <option value="grid">Grid (Organized)</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Spacing</label>
+          <input type="range" id="layout-spacing" min="50" max="300" value="150" style="width: 100%;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-secondary); margin-top: 4px;">
+            <span>Tight</span>
+            <span id="spacing-value">150px</span>
+            <span>Loose</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="secondary" id="cancel-layout">Cancel</button>
+          <button class="primary" id="apply-layout">Apply Layout</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const spacingSlider = document.getElementById('layout-spacing');
+  const spacingValue = document.getElementById('spacing-value');
+  if (spacingSlider && spacingValue) {
+    spacingSlider.addEventListener('input', () => {
+      spacingValue.textContent = spacingSlider.value + 'px';
+    });
+  }
+
+  document.getElementById('cancel-layout').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+
+  document.getElementById('apply-layout').addEventListener('click', async () => {
+    const algorithm = document.getElementById('layout-algorithm').value;
+    const spacing = parseInt(document.getElementById('layout-spacing').value, 10);
+    
+    await state.autoLayoutCanvas(algorithm, spacing);
+    container.innerHTML = '';
+  });
+}
+
 function closeContextMenu() {
   if (canvasState.contextMenu) {
     canvasState.contextMenu.remove();
     canvasState.contextMenu = null;
   }
+}
+
+export function autoFitCanvas(state) {
+  const ideas = state.getFilteredIdeas();
+  if (ideas.length === 0) return;
+
+  const canvas = document.getElementById('bubble-canvas');
+  if (!canvas) return;
+
+  const canvasRect = canvas.getBoundingClientRect();
+  
+  const minX = Math.min(...ideas.map(i => i.canvas_pos.x));
+  const maxX = Math.max(...ideas.map(i => i.canvas_pos.x + 260));
+  const minY = Math.min(...ideas.map(i => i.canvas_pos.y));
+  const maxY = Math.max(...ideas.map(i => i.canvas_pos.y + 160));
+
+  const contentWidth = maxX - minX;
+  const contentHeight = maxY - minY;
+  const contentCenterX = minX + contentWidth / 2;
+  const contentCenterY = minY + contentHeight / 2;
+
+  const padding = 100;
+  const scaleX = (canvasRect.width - padding * 2) / contentWidth;
+  const scaleY = (canvasRect.height - padding * 2) / contentHeight;
+  const newScale = Math.min(scaleX, scaleY, 1);
+
+  canvasState.scale = newScale;
+  canvasState.offsetX = canvasRect.width / 2 - contentCenterX * newScale;
+  canvasState.offsetY = canvasRect.height / 2 - contentCenterY * newScale;
+
+  const canvasContainer = document.getElementById('canvas-container');
+  if (canvasContainer) {
+    canvasContainer.style.transform = `translate(${canvasState.offsetX}px, ${canvasState.offsetY}px) scale(${canvasState.scale})`;
+  }
+
+  const zoomLevel = document.getElementById('zoom-level');
+  if (zoomLevel) {
+    zoomLevel.textContent = Math.round(canvasState.scale * 100) + '%';
+  }
+}
+
+export function resetCanvasState() {
+  canvasState.scale = 1;
+  canvasState.offsetX = 0;
+  canvasState.offsetY = 0;
+}
+
+async function acceptSuggestion(ideaId, state) {
+  await state.acceptSuggestion(ideaId);
+}
+
+async function dismissSuggestion(ideaId, state) {
+  await state.dismissSuggestion(ideaId);
 }

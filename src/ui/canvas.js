@@ -36,6 +36,7 @@ export function renderCanvas(state) {
       <div style="display: flex; gap: 8px;">
         <button class="secondary ${canvasState.linkMode ? 'active' : ''}" id="link-mode-btn">Link Mode</button>
         <button class="secondary ${canvasState.mergeMode ? 'active' : ''}" id="merge-mode-btn">Merge Mode</button>
+        <button class="secondary" id="auto-layout">Auto Layout</button>
         <button class="secondary" id="toggle-legend">Legend</button>
         <button class="secondary" id="fit-view">Fit View</button>
         <button class="secondary" id="reset-view">Reset View</button>
@@ -248,7 +249,8 @@ function updateConnectionLines(state) {
 function renderBubble(idea, state) {
   const isDue = isIdeaDue(idea);
   const isMerged = idea.merged_from && idea.merged_from.length > 0;
-  const bubbleClass = `bubble bubble-${idea.color_variant} ${state.settings.bubbleFloat ? 'bubble-float' : ''}`;
+  const isAISuggestion = idea.is_ai_suggestion;
+  const bubbleClass = `bubble bubble-${idea.color_variant} ${state.settings.bubbleFloat ? 'bubble-float' : ''} ${isAISuggestion ? 'ai-suggestion-bubble' : ''}`;
   const animationDelay = (parseInt(idea.id.slice(-8), 16) % 6000) / 1000;
 
   return `
@@ -256,14 +258,26 @@ function renderBubble(idea, state) {
          data-id="${idea.id}"
          style="left: ${idea.canvas_pos.x}px; top: ${idea.canvas_pos.y}px; animation-delay: ${animationDelay}s;">
       ${isDue ? '<div class="due-indicator"></div>' : ''}
+      ${isAISuggestion ? '<div class="ai-suggestion-badge"></div>' : ''}
       <div class="idea-bubble-quick-actions">
-        <button class="quick-action-btn" data-action="edit" title="Edit">✎</button>
-        <button class="quick-action-btn" data-action="link" title="Link">🔗</button>
+        ${isAISuggestion ? `
+          <button class="quick-action-btn suggestion-accept" data-action="accept-suggestion" title="Accept">✓</button>
+          <button class="quick-action-btn suggestion-dismiss" data-action="dismiss-suggestion" title="Dismiss">✕</button>
+        ` : `
+          <button class="quick-action-btn" data-action="edit" title="Edit">✎</button>
+          <button class="quick-action-btn" data-action="link" title="Link">🔗</button>
+        `}
       </div>
       <div class="idea-bubble-title">${escapeHtml(idea.title || 'Untitled Idea')}</div>
+      ${isAISuggestion && idea.suggestion_type ? `
+        <div class="ai-suggestion-type">${escapeHtml(getSuggestionTypeLabel(idea.suggestion_type))}</div>
+      ` : ''}
       <div class="idea-bubble-meta">
         <span class="status-pill">${escapeHtml(idea.status)}</span>
       </div>
+      ${isAISuggestion && idea.suggestion_reason ? `
+        <div class="ai-suggestion-reason">${escapeHtml(idea.suggestion_reason)}</div>
+      ` : ''}
       <div class="confidence-ring" style="--confidence-color: var(--color-bubble-${idea.color_variant}); --confidence-percent: ${idea.confidence}%;">
         <div class="confidence-ring-progress"></div>
         <span>${idea.confidence}</span>
@@ -271,6 +285,16 @@ function renderBubble(idea, state) {
       ${isMerged ? '<div class="merged-badge">Merged</div>' : ''}
     </div>
   `;
+}
+
+function getSuggestionTypeLabel(type) {
+  const labels = {
+    'improvement': '💡 Improvement',
+    'connection': '🔗 Connection',
+    'new_idea': '✨ New Idea',
+    'merge': '🔀 Merge'
+  };
+  return labels[type] || '✨ Suggestion';
 }
 
 function attachCanvasListeners(state) {
@@ -395,6 +419,10 @@ function attachCanvasListeners(state) {
           state.setSelectedIdeaId(ideaId);
         } else if (action === 'link') {
           showLinkDialog(state, ideaId);
+        } else if (action === 'accept-suggestion') {
+          acceptSuggestion(ideaId, state);
+        } else if (action === 'dismiss-suggestion') {
+          dismissSuggestion(ideaId, state);
         }
       } else if (!canvasState.bubbleWasMoved) {
         if (canvasState.linkMode) {
@@ -541,6 +569,13 @@ function attachCanvasListeners(state) {
           canvasState.mergeSourceBubble = null;
         }
       }
+    });
+  }
+
+  const autoLayoutBtn = document.getElementById('auto-layout');
+  if (autoLayoutBtn) {
+    autoLayoutBtn.addEventListener('click', async () => {
+      showLayoutDialog(state);
     });
   }
   
@@ -946,6 +981,64 @@ function showSplitDialog(idea, state) {
   });
 }
 
+function showLayoutDialog(state) {
+  const container = document.getElementById('modal-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="modal-overlay" id="layout-modal">
+      <div class="modal-content" style="max-width: 450px;">
+        <h2 style="margin-bottom: 16px;">Auto Layout</h2>
+        <p style="color: var(--color-text-secondary); margin-bottom: 20px;">
+          Choose a layout algorithm to automatically arrange your ideas on the canvas.
+        </p>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Layout Algorithm</label>
+          <select id="layout-algorithm" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-outline);">
+            <option value="force-directed">Force-Directed (Organic)</option>
+            <option value="hierarchical">Hierarchical (Tree)</option>
+            <option value="circular">Circular (Radial)</option>
+            <option value="grid">Grid (Organized)</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Spacing</label>
+          <input type="range" id="layout-spacing" min="50" max="300" value="150" style="width: 100%;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-secondary); margin-top: 4px;">
+            <span>Tight</span>
+            <span id="spacing-value">150px</span>
+            <span>Loose</span>
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="secondary" id="cancel-layout">Cancel</button>
+          <button class="primary" id="apply-layout">Apply Layout</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const spacingSlider = document.getElementById('layout-spacing');
+  const spacingValue = document.getElementById('spacing-value');
+  if (spacingSlider && spacingValue) {
+    spacingSlider.addEventListener('input', () => {
+      spacingValue.textContent = spacingSlider.value + 'px';
+    });
+  }
+
+  document.getElementById('cancel-layout').addEventListener('click', () => {
+    container.innerHTML = '';
+  });
+
+  document.getElementById('apply-layout').addEventListener('click', async () => {
+    const algorithm = document.getElementById('layout-algorithm').value;
+    const spacing = parseInt(document.getElementById('layout-spacing').value, 10);
+    
+    await state.autoLayoutCanvas(algorithm, spacing);
+    container.innerHTML = '';
+  });
+}
+
 function closeContextMenu() {
   if (canvasState.contextMenu) {
     canvasState.contextMenu.remove();
@@ -996,4 +1089,12 @@ export function resetCanvasState() {
   canvasState.scale = 1;
   canvasState.offsetX = 0;
   canvasState.offsetY = 0;
+}
+
+async function acceptSuggestion(ideaId, state) {
+  await state.acceptSuggestion(ideaId);
+}
+
+async function dismissSuggestion(ideaId, state) {
+  await state.dismissSuggestion(ideaId);
 }

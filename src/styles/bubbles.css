@@ -123,12 +123,19 @@
 
 .idea-bubble-title {
   font-family: var(--font-heading);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 8px;
-  line-height: 1.3;
+  margin-bottom: 6px;
+  line-height: 1.2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ai-suggestion-bubble .idea-bubble-title {
+  -webkit-line-clamp: 3;
+  line-height: 1.3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -172,6 +179,28 @@
   background: var(--color-accent-blue);
   color: white;
   border-color: var(--color-accent-blue);
+}
+
+.quick-action-btn.suggestion-accept {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.quick-action-btn.suggestion-accept:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.quick-action-btn.suggestion-dismiss {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+.quick-action-btn.suggestion-dismiss:hover {
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 .merged-bubble {
@@ -336,4 +365,172 @@
 
 .connection-line.selected {
   stroke-width: 4;
+}
+
+.ai-suggestion-bubble {
+  border: 2px dashed #a855f7;
+  opacity: 0.7;
+  background: rgba(168, 85, 247, 0.1);
+  animation: suggestionPulse 2s ease-in-out infinite;
+  overflow: visible;
+  min-height: 200px;
+}
+
+.ai-suggestion-bubble::before {
+  border: 2px dashed #a855f7;
+  opacity: 0.4;
+}
+
+.ai-suggestion-bubble::after {
+  border: 2px dashed #a855f7;
+  opacity: 0.2;
+}
+
+.ai-suggestion-bubble:hover {
+  opacity: 0.9;
+  box-shadow:
+    0 4px 8px rgba(168, 85, 247, 0.2),
+    0 12px 28px rgba(168, 85, 247, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5),
+    0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+@keyframes suggestionPulse {
+  0%, 100% {
+    opacity: 0.7;
+    box-shadow:
+      0 2px 4px rgba(43, 38, 34, 0.05),
+      0 8px 16px rgba(43, 38, 34, 0.08),
+      0 0 10px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow:
+      0 2px 4px rgba(43, 38, 34, 0.05),
+      0 8px 16px rgba(43, 38, 34, 0.08),
+      0 0 20px rgba(168, 85, 247, 0.4);
+  }
+}
+
+.ai-suggestion-badge {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.4);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-suggestion-badge::before {
+  content: '✨';
+}
+
+.ai-suggestion-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9333ea;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ai-suggestion-reason {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.ai-suggestion-actions {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 20;
+}
+
+.ai-suggestion-bubble:hover .ai-suggestion-actions {
+  opacity: 1;
+}
+
+.ai-suggestion-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.ai-suggestion-btn.accept {
+  background: #a855f7;
+  color: white;
+}
+
+.ai-suggestion-btn.accept:hover {
+  background: #7c3aed;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
+}
+
+.ai-suggestion-btn.dismiss {
+  background: #6b7280;
+  color: white;
+}
+
+.ai-suggestion-btn.dismiss:hover {
+  background: #4b5563;
+  transform: translateY(-2px);
+}
+
+.suggestion-type-improvement {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.suggestion-type-improvement .ai-suggestion-badge {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.suggestion-type-connection {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.suggestion-type-connection .ai-suggestion-badge {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.suggestion-type-new_idea {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.suggestion-type-new_idea .ai-suggestion-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.suggestion-type-merge {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.suggestion-type-merge .ai-suggestion-badge {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
 }

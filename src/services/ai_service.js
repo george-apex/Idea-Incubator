@@ -6,14 +6,14 @@ export class AIService {
     this.baseUrl = config.baseUrl || 'https://api.tensorix.ai/v1';
   }
 
-  async generateIdeasFromNotes(notes) {
-    const prompt = this.buildPrompt(notes);
+  async generateIdeasFromNotes(notes, includeSuggestions = true) {
+    const prompt = this.buildPrompt(notes, includeSuggestions);
     const response = await this.callAI(prompt);
     return this.parseResponse(response);
   }
 
-  buildPrompt(notes) {
-    return `You are an expert at extracting and organizing ideas from meeting notes. 
+  buildPrompt(notes, includeSuggestions = true) {
+    let prompt = `You are an expert at extracting and organizing ideas from meeting notes.
 
 Analyze the following notes and extract distinct ideas/concepts. For each idea, provide:
 1. A clear, concise title
@@ -25,11 +25,29 @@ Analyze the following notes and extract distinct ideas/concepts. For each idea, 
 7. Related ideas (list of idea titles this connects to)
 8. Tags (relevant keywords)
 
-IMPORTANT: Organize ideas into a proper hierarchy with multiple top-level ideas and sub-ideas. 
+IMPORTANT: Organize ideas into a proper hierarchy with multiple top-level ideas and sub-ideas.
 - Create 3-5 main top-level ideas (no parent)
 - Group related sub-ideas under their appropriate parent
 - Avoid creating a linear chain where each idea has the previous one as parent
-- Each top-level idea should have 2-4 sub-ideas
+- Each top-level idea should have 2-4 sub-ideas`;
+
+    if (includeSuggestions) {
+      prompt += `
+
+After extracting ideas, also generate 3-5 AI suggestions to improve the idea set. Suggestions can be:
+- "improvement": Enhance an existing idea (add assumptions, clarify summary, etc.)
+- "connection": Link two related ideas that should be connected
+- "new_idea": Suggest a missing idea that would connect existing concepts
+- "merge": Suggest merging two similar ideas
+
+For each suggestion, provide:
+1. Type (improvement, connection, new_idea, merge)
+2. Target idea title(s) (for improvements/connections/merges)
+3. Suggestion content (what to add/change)
+4. Reason (why this suggestion is valuable)`;
+    }
+
+    prompt += `
 
 Format your response as valid JSON with this structure:
 {
@@ -44,13 +62,53 @@ Format your response as valid JSON with this structure:
       "related_to": ["Related Idea 1", "Related Idea 2"],
       "tags": ["tag1", "tag2"]
     }
-  ]
+  ]`;
+
+    if (includeSuggestions) {
+      prompt += `,
+  "suggestions": [
+    {
+      "type": "improvement",
+      "target_idea": "Idea Title",
+      "suggestion": "Add assumption about...",
+      "reason": "This would clarify..."
+    },
+    {
+      "type": "connection",
+      "from_idea": "Idea A",
+      "to_idea": "Idea B",
+      "reason": "Both relate to..."
+    },
+    {
+      "type": "new_idea",
+      "title": "Missing Idea",
+      "summary": "Brief description",
+      "confidence": 60,
+      "status": "New",
+      "color_variant": "primary",
+      "parent": "Parent Idea Title (or null)",
+      "related_to": ["Related Idea"],
+      "tags": ["tag"],
+      "reason": "This connects..."
+    },
+    {
+      "type": "merge",
+      "from_idea": "Idea A",
+      "to_idea": "Idea B",
+      "reason": "These are essentially the same concept"
+    }
+  ]`;
+    }
+
+    prompt += `
 }
 
 Notes to analyze:
 ${notes}
 
 Return ONLY valid JSON, no additional text.`;
+
+    return prompt;
   }
 
   async callAI(prompt) {
@@ -211,6 +269,56 @@ Spread ideas evenly, group related ideas together, avoid overlaps. Return ONLY J
     const response = await this.callAI(prompt);
     const parsed = this.parseResponse(response);
     return parsed.positions || [];
+  }
+
+  async generateSuggestions(ideas, originalNotes) {
+    const prompt = `You are an expert at analyzing and improving idea sets.
+
+I have extracted these ideas from meeting notes:
+${ideas.map(i => `- ${i.title}: ${i.summary}`).join('\n')}
+
+Original notes:
+${originalNotes}
+
+Generate 3-5 AI suggestions to improve this idea set. Suggestions can be:
+- "improvement": Enhance an existing idea (add assumptions, clarify summary, add next steps, etc.)
+- "connection": Link two related ideas that should be connected
+- "new_idea": Suggest a missing idea that would connect existing concepts
+- "merge": Suggest merging two similar ideas
+
+For each suggestion, provide:
+1. Type (improvement, connection, new_idea, merge)
+2. Target idea title(s) (for improvements/connections/merges)
+3. Suggestion content (what to add/change)
+4. Reason (why this suggestion is valuable)
+
+For new_idea type, also include:
+- title
+- summary
+- confidence (0-100)
+- status
+- color_variant (primary, secondary, tertiary)
+- parent (or null)
+- related_to (array of idea titles)
+- tags (array)
+
+Format your response as valid JSON:
+{
+  "suggestions": [
+    {
+      "type": "improvement",
+      "target_idea": "Idea Title",
+      "suggestion": "Add assumption about...",
+      "reason": "This would clarify..."
+    }
+  ]
+}
+
+Return ONLY valid JSON, no additional text.`;
+
+    const response = await this.callAI(prompt);
+    const parsed = this.parseResponse(response);
+    return parsed.suggestions || [];
   }
 }
 

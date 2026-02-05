@@ -1,8 +1,10 @@
-roimport { generateUUID } from '../utils/uuid.js';
+import { generateUUID } from '../utils/uuid.js';
 
 export const DEFAULT_STATUSES = ['Incubating', 'Exploring', 'Validating', 'Building', 'Shipped', 'Dropped'];
 
 export const COLOR_VARIANTS = ['primary', 'secondary', 'tertiary'];
+
+export const SUGGESTION_TYPES = ['improvement', 'connection', 'new_idea', 'merge'];
 
 export function createIdea(data = {}) {
   const now = Date.now();
@@ -30,7 +32,11 @@ export function createIdea(data = {}) {
     assumptions: data.assumptions || [],
     open_questions: data.open_questions || [],
     next_steps: data.next_steps || [],
-    reviews: data.reviews || []
+    reviews: data.reviews || [],
+    is_ai_suggestion: data.is_ai_suggestion || false,
+    suggestion_type: data.suggestion_type || null,
+    suggestion_reason: data.suggestion_reason || '',
+    suggestion_target_id: data.suggestion_target_id || null
   };
 }
 

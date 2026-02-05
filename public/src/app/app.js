@@ -225,22 +225,17 @@ function showSettingsDialog() {
         <h2 style="margin-bottom: 16px;">Settings</h2>
 
         <div style="margin-bottom: 16px;">
-          <label for="setting-theme" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Theme Intensity</label>
-          <select id="setting-theme" style="width: 100%;">
-            <option value="calm" ${appState.settings.themeIntensity === 'calm' ? 'selected' : ''}>Calm</option>
-            <option value="normal" ${appState.settings.themeIntensity === 'normal' ? 'selected' : ''}>Normal</option>
-            <option value="high" ${appState.settings.themeIntensity === 'high' ? 'selected' : ''}>High Contrast</option>
-          </select>
+          <label for="setting-float" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
+            <span style="font-size: 14px; font-weight: 500;">Bubble Float Animation</span>
+          </label>
         </div>
 
         <div style="margin-bottom: 16px;">
-          <label for="setting-float" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Bubble Float Animation</label>
-          <input type="checkbox" id="setting-float" ${appState.settings.bubbleFloat ? 'checked' : ''}>
-        </div>
-
-        <div style="margin-bottom: 16px;">
-          <label for="setting-glassy" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">Glassy Aesthetic</label>
-          <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
+          <label for="setting-glassy" style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="setting-glassy" ${appState.settings.glassyAesthetic ? 'checked' : ''}>
+            <span style="font-size: 14px; font-weight: 500;">Glassy Aesthetic</span>
+          </label>
         </div>
 
         <div style="margin-bottom: 16px;">
@@ -268,14 +263,6 @@ function showSettingsDialog() {
               Your API key is stored locally and never sent to our servers.
             </p>
           </div>
-          <div style="margin-bottom: 12px;">
-            <label for="setting-ai-model" style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px;">AI Model</label>
-            <select id="setting-ai-model" style="width: 100%;">
-              <option value="gpt-4o-mini" ${appState.settings.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o Mini (Fast, Cost-effective)</option>
-              <option value="gpt-4o" ${appState.settings.aiModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (Best Quality)</option>
-              <option value="gpt-3.5-turbo" ${appState.settings.aiModel === 'gpt-3.5-turbo' ? 'selected' : ''}>GPT-3.5 Turbo (Legacy)</option>
-            </select>
-          </div>
         </div>
 
         <div style="display: flex; gap: 12px; justify-content: flex-end;">
@@ -292,12 +279,10 @@ function showSettingsDialog() {
 
   document.getElementById('save-settings').addEventListener('click', async () => {
     const newSettings = {
-      themeIntensity: document.getElementById('setting-theme').value,
       bubbleFloat: document.getElementById('setting-float').checked,
       glassyAesthetic: document.getElementById('setting-glassy').checked,
       defaultReviewCadence: parseInt(document.getElementById('setting-cadence').value),
-      aiApiKey: document.getElementById('setting-ai-key').value.trim(),
-      aiModel: document.getElementById('setting-ai-model').value
+      aiApiKey: document.getElementById('setting-ai-key').value.trim()
     };
 
     await appState.updateSettings(newSettings);

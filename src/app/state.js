@@ -13,14 +13,12 @@ class AppState {
     this.filterArchived = false;
     this.dueIdeas = [];
     this.settings = {
-      themeIntensity: 'normal',
       bubbleFloat: true,
       defaultReviewCadence: 14,
       customStatuses: [],
       glassyAesthetic: false,
       aiApiKey: '',
-      aiProvider: 'tensorix',
-      aiModel: 'z-ai/glm-4.7'
+      aiProvider: 'tensorix'
     };
     this.listeners = [];
   }
@@ -311,7 +309,6 @@ class AppState {
   async importIdeasFromAI(aiIdeas) {
     const createdIdeas = [];
     const titleToIdMap = {};
-    const positions = this.generateLayoutPositions(aiIdeas);
 
     for (let i = 0; i < aiIdeas.length; i++) {
       const aiIdea = aiIdeas[i];
@@ -322,7 +319,10 @@ class AppState {
         status: aiIdea.status || 'New',
         color_variant: aiIdea.color_variant || 'primary',
         tags: aiIdea.tags || [],
-        canvas_pos: positions[i]
+        canvas_pos: { x: 0, y: 0 },
+        is_ai_suggestion: aiIdea.is_ai_suggestion || false,
+        suggestion_type: aiIdea.suggestion_type || null,
+        suggestion_reason: aiIdea.suggestion_reason || null
       });
 
       await saveIdea(newIdea);
@@ -348,74 +348,31 @@ class AppState {
       await saveIdea(createdIdea);
     }
 
+    const positions = this.generateLayoutPositions(createdIdeas, 'force-directed', 150);
+    for (let i = 0; i < createdIdeas.length; i++) {
+      createdIdeas[i].canvas_pos = positions[i];
+      await saveIdea(createdIdeas[i]);
+    }
+
     this.notify();
     return createdIdeas;
   }
 
-  generateLayoutPositions(ideas) {
-    const count = ideas.length;
-    const bubbleWidth = 260;
-    const bubbleHeight = 160;
-    const horizontalGap = 80;
-    const verticalGap = 200;
-    const canvasWidth = 5000;
-    const canvasHeight = 4000;
+  async generateLayoutPositions(ideas, algorithm = 'force-directed', spacing = 150) {
+    const { layoutEngine } = await import('../utils/layout_engine.js');
+    return layoutEngine.autoLayout(ideas, algorithm, spacing);
+  }
 
-    if (count === 0) return [];
+  async autoLayoutCanvas(algorithm = 'force-directed', spacing = 150) {
+    const ideas = this.getFilteredIdeas();
+    const positions = await this.generateLayoutPositions(ideas, algorithm, spacing);
 
-    if (count === 1) {
-      return [{ x: canvasWidth / 2 - bubbleWidth / 2, y: 200 }];
+    for (let i = 0; i < ideas.length; i++) {
+      ideas[i].canvas_pos = positions[i];
+      await this.updateIdea(ideas[i]);
     }
 
-    const titleToIdea = new Map();
-    ideas.forEach((idea) => {
-      titleToIdea.set(idea.title, idea);
-    });
-
-    const topLevelIdeas = ideas.filter(idea => !idea.parent);
-
-    const positions = new Map();
-    let currentY = 200;
-
-    topLevelIdeas.forEach((idea) => {
-      const children = ideas.filter(child => child.parent === idea.title);
-      const groupSize = 1 + children.length;
-      const groupWidth = groupSize * (bubbleWidth + horizontalGap) - horizontalGap;
-      const groupStartX = (canvasWidth - groupWidth) / 2;
-
-      const x = groupStartX;
-      const y = currentY;
-      positions.set(idea.title, { x, y });
-
-      if (children.length > 0) {
-        const childrenY = y + verticalGap;
-        const childrenWidth = children.length * (bubbleWidth + horizontalGap) - horizontalGap;
-        const childrenStartX = (canvasWidth - childrenWidth) / 2;
-
-        children.forEach((child, childIndex) => {
-          const childX = childrenStartX + childIndex * (bubbleWidth + horizontalGap);
-          positions.set(child.title, { x: childX, y: childrenY });
-        });
-
-        currentY = childrenY + verticalGap + 100;
-      } else {
-        currentY = y + verticalGap + 100;
-      }
-    });
-
-    const result = [];
-    ideas.forEach(idea => {
-      if (positions.has(idea.title)) {
-        result.push(positions.get(idea.title));
-      } else {
-        result.push({
-          x: Math.random() * (canvasWidth - bubbleWidth - 100) + 50,
-          y: Math.random() * (canvasHeight - bubbleHeight - 100) + 50
-        });
-      }
-    });
-
-    return result;
+    this.notify();
   }
 
   setAIApiKey(apiKey) {
@@ -431,9 +388,63 @@ class AppState {
     const { createAIService } = await import('../services/ai_service.js');
     return createAIService({
       provider: this.settings.aiProvider,
-      apiKey: this.settings.aiApiKey,
-      model: this.settings.aiModel
+      apiKey: this.settings.aiApiKey
     });
+  }
+
+  async acceptSuggestion(ideaId) {
+    const idea = this.ideas.find(i => i.id === ideaId);
+    if (!idea || !idea.is_ai_suggestion) return;
+
+    switch (idea.suggestion_type) {
+      case 'improvement':
+        if (idea.suggestion_target_id) {
+          const targetIdea = this.ideas.find(i => i.id === idea.suggestion_target_id);
+          if (targetIdea) {
+            targetIdea.summary += '\n\n' + idea.summary;
+            await this.updateIdea(targetIdea);
+          }
+        }
+        await this.deleteIdea(ideaId);
+        break;
+      case 'connection':
+        if (idea.suggestion_target_id) {
+          const targetIdea = this.ideas.find(i => i.id === idea.suggestion_target_id);
+          if (targetIdea && !targetIdea.links.includes(ideaId)) {
+            targetIdea.links.push(ideaId);
+            idea.links.push(targetIdea.id);
+            await this.updateIdea(targetIdea);
+          }
+        }
+        idea.is_ai_suggestion = false;
+        idea.suggestion_type = null;
+        idea.suggestion_reason = null;
+        idea.suggestion_target_id = null;
+        await this.updateIdea(idea);
+        break;
+      case 'new_idea':
+        idea.is_ai_suggestion = false;
+        idea.suggestion_type = null;
+        idea.suggestion_reason = null;
+        idea.suggestion_target_id = null;
+        await this.updateIdea(idea);
+        break;
+      case 'merge':
+        if (idea.suggestion_target_id) {
+          await this.mergeIdeas(ideaId, idea.suggestion_target_id, {
+            title: idea.title,
+            summary: idea.summary
+          });
+        }
+        break;
+    }
+  }
+
+  async dismissSuggestion(ideaId) {
+    const idea = this.ideas.find(i => i.id === ideaId);
+    if (!idea || !idea.is_ai_suggestion) return;
+
+    await this.deleteIdea(ideaId);
   }
 }
 
