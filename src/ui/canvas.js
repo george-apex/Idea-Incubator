@@ -997,8 +997,14 @@ function showLayoutDialog(state) {
           <select id="layout-algorithm" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-outline);">
             <option value="force-directed">Force-Directed (Organic)</option>
             <option value="hierarchical">Hierarchical (Tree)</option>
-            <option value="circular">Circular (Radial)</option>
+            <option value="circular-ordered">Circular (By Connections)</option>
             <option value="grid">Grid (Organized)</option>
+            <option value="layered">Layered (Sugiyama-style)</option>
+            <option value="hybrid">Hybrid (Cluster-based)</option>
+            <option value="status">Status (Kanban-style)</option>
+            <option value="confidence">Confidence (Low to High)</option>
+            <option value="tag">Tag-based (Thematic)</option>
+            <option value="mindmap">Mind Map (Radial)</option>
           </select>
         </div>
         <div style="margin-bottom: 20px;">
@@ -1018,9 +1024,19 @@ function showLayoutDialog(state) {
     </div>
   `;
 
+  const algorithmSelect = document.getElementById('layout-algorithm');
   const spacingSlider = document.getElementById('layout-spacing');
   const spacingValue = document.getElementById('spacing-value');
-  if (spacingSlider && spacingValue) {
+
+  if (algorithmSelect) {
+    algorithmSelect.value = state.currentLayoutAlgorithm || 'force-directed';
+  }
+
+  if (spacingSlider) {
+    spacingSlider.value = state.currentLayoutSpacing || 150;
+    if (spacingValue) {
+      spacingValue.textContent = spacingSlider.value + 'px';
+    }
     spacingSlider.addEventListener('input', () => {
       spacingValue.textContent = spacingSlider.value + 'px';
     });
@@ -1033,7 +1049,10 @@ function showLayoutDialog(state) {
   document.getElementById('apply-layout').addEventListener('click', async () => {
     const algorithm = document.getElementById('layout-algorithm').value;
     const spacing = parseInt(document.getElementById('layout-spacing').value, 10);
-    
+
+    state.currentLayoutAlgorithm = algorithm;
+    state.currentLayoutSpacing = spacing;
+
     await state.autoLayoutCanvas(algorithm, spacing);
     container.innerHTML = '';
   });

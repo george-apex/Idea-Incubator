@@ -12,6 +12,8 @@ class AppState {
     this.filterDueOnly = false;
     this.filterArchived = false;
     this.dueIdeas = [];
+    this.currentLayoutAlgorithm = 'force-directed';
+    this.currentLayoutSpacing = 150;
     this.settings = {
       bubbleFloat: true,
       defaultReviewCadence: 14,
@@ -348,7 +350,7 @@ class AppState {
       await saveIdea(createdIdea);
     }
 
-    const positions = this.generateLayoutPositions(createdIdeas, 'force-directed', 150);
+    const positions = this.generateLayoutPositions(createdIdeas, 'layered', 150);
     for (let i = 0; i < createdIdeas.length; i++) {
       createdIdeas[i].canvas_pos = positions[i];
       await saveIdea(createdIdeas[i]);
