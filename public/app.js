@@ -23,7 +23,6 @@ initApp().catch(error => {
 });
 
 function setupEventListeners() {
-  const searchBox = document.getElementById('search-box');
   const createIdeaBtn = document.getElementById('create-idea-btn');
   const aiImportBtn = document.getElementById('ai-import-btn');
   const quickAddInput = document.getElementById('quick-add-input');
@@ -33,12 +32,6 @@ function setupEventListeners() {
   const settingsBtn = document.getElementById('settings-btn');
   const clearCanvasBtn = document.getElementById('clear-canvas-btn');
   const dueCounter = document.getElementById('due-counter');
-
-  if (searchBox) {
-    searchBox.addEventListener('input', (e) => {
-      appState.setSearchQuery(e.target.value);
-    });
-  }
 
   if (createIdeaBtn) {
     createIdeaBtn.addEventListener('click', () => {

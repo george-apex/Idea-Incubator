@@ -1,4 +1,5 @@
 import { isIdeaDue, getStaleDays } from '../models/idea.js';
+import { renderSearchBox, renderSearchResults, setupSearchEventListeners } from './search.js';
 
 export function renderSidebar(state) {
   const container = document.getElementById('sidebar');
@@ -10,6 +11,7 @@ export function renderSidebar(state) {
 
   container.innerHTML = `
     <div class="sidebar-header">
+      ${renderSearchBox(state)}
       <div class="sidebar-filters">
         <div class="filter-group">
           <label class="filter-label">Status</label>
@@ -50,9 +52,11 @@ export function renderSidebar(state) {
         </div>
       ` : filteredIdeas.map(idea => renderIdeaListItem(idea, state)).join('')}
     </div>
+    ${renderSearchResults(state)}
   `;
 
   attachSidebarListeners(state);
+  setupSearchEventListeners(state);
 }
 
 function renderIdeaListItem(idea, state) {

@@ -7,6 +7,7 @@ import { showAIImportDialog } from '../ui/ai_import.js';
 import { exportToPideas, exportToMarkdown, importFromPideas, showImportDialog } from '../utils/export_import.js';
 import { bulkSaveIdeas } from '../db/idb.js';
 import { generateUUID } from '../utils/uuid.js';
+import { renderSearchBox, renderSearchResults, setupSearchEventListeners } from '../ui/search.js';
 
 let dueCheckInterval = null;
 

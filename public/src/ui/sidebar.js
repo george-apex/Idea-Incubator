@@ -1,4 +1,5 @@
 import { isIdeaDue, getStaleDays } from '../models/idea.js';
+import { renderSearchBox, renderSearchResults, setupSearchEventListeners } from './search.js';
 
 export function renderSidebar(state) {
   const container = document.getElementById('sidebar');
@@ -10,9 +11,10 @@ export function renderSidebar(state) {
 
   container.innerHTML = `
     <div class="sidebar-header">
+      ${renderSearchBox(state)}
       <div class="sidebar-filters">
         <div class="filter-group">
-          <label class="filter-label" for="filter-status">Status</label>
+          <label class="filter-label">Status</label>
           <select class="filter-select" id="filter-status">
             <option value="all" ${state.filterStatus === 'all' ? 'selected' : ''}>All Statuses</option>
             ${statuses.map(status => `
@@ -21,7 +23,7 @@ export function renderSidebar(state) {
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label" for="filter-category">Category</label>
+          <label class="filter-label">Category</label>
           <select class="filter-select" id="filter-category">
             <option value="all" ${state.filterCategory === 'all' ? 'selected' : ''}>All Categories</option>
             ${categories.map(cat => `
@@ -30,12 +32,16 @@ export function renderSidebar(state) {
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label" for="filter-due">Due Only</label>
-          <input type="checkbox" id="filter-due" ${state.filterDueOnly ? 'checked' : ''}>
+          <label class="filter-label">
+            <input type="checkbox" id="filter-due" ${state.filterDueOnly ? 'checked' : ''}>
+            Due Only
+          </label>
         </div>
         <div class="filter-group">
-          <label class="filter-label" for="filter-archived">Show Archived</label>
-          <input type="checkbox" id="filter-archived" ${state.filterArchived ? 'checked' : ''}>
+          <label class="filter-label">
+            <input type="checkbox" id="filter-archived" ${state.filterArchived ? 'checked' : ''}>
+            Show Archived
+          </label>
         </div>
       </div>
     </div>
@@ -46,9 +52,11 @@ export function renderSidebar(state) {
         </div>
       ` : filteredIdeas.map(idea => renderIdeaListItem(idea, state)).join('')}
     </div>
+    ${renderSearchResults(state)}
   `;
 
   attachSidebarListeners(state);
+  setupSearchEventListeners(state);
 }
 
 function renderIdeaListItem(idea, state) {

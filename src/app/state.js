@@ -23,6 +23,13 @@ class AppState {
       aiProvider: 'tensorix'
     };
     this.listeners = [];
+    this.searchService = null;
+    this.searchResults = [];
+    this.searchOptions = {
+      useSemantic: true,
+      useKeyword: true,
+      limit: 20
+    };
   }
 
   async init() {
@@ -31,6 +38,7 @@ class AppState {
     this.dueIdeas = await getDueIdeas();
     const savedSettings = await getSettings();
     this.settings = { ...this.settings, ...savedSettings };
+    await this.initSearchService();
     this.notify();
   }
 
@@ -66,7 +74,10 @@ class AppState {
       filtered = filtered.filter(idea => isIdeaDue(idea));
     }
 
-    if (this.searchQuery) {
+    if (this.searchQuery && this.searchResults.length > 0) {
+      const resultIds = new Set(this.searchResults.map(r => r.idea.id));
+      filtered = filtered.filter(idea => resultIds.has(idea.id));
+    } else if (this.searchQuery) {
       const query = this.searchQuery.toLowerCase();
       filtered = filtered.filter(idea =>
         idea.title.toLowerCase().includes(query) ||
@@ -447,6 +458,111 @@ class AppState {
     if (!idea || !idea.is_ai_suggestion) return;
 
     await this.deleteIdea(ideaId);
+  }
+
+  async getTagSuggestions(ideaId) {
+    const idea = this.ideas.find(i => i.id === ideaId);
+    if (!idea) return [];
+
+    const { createTagSuggestionService } = await import('../services/tag_suggestion_service.js');
+    const { getTagVocabulary } = await import('../db/idb.js');
+
+    const tagService = createTagSuggestionService();
+    const tagVocabulary = await getTagVocabulary();
+
+    const suggestions = tagService.generateTagSuggestions(idea, this.ideas, tagVocabulary);
+    return suggestions;
+  }
+
+  async updateTagVocabulary() {
+    const { createTagSuggestionService } = await import('../services/tag_suggestion_service.js');
+    const { bulkSaveTagVocabulary, clearTagVocabulary } = await import('../db/idb.js');
+
+    const tagService = createTagSuggestionService();
+    const vocabulary = tagService.buildTagVocabulary(this.ideas);
+
+    await clearTagVocabulary();
+    await bulkSaveTagVocabulary(vocabulary);
+  }
+
+  async addTagToIdea(ideaId, tag) {
+    const idea = this.ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const tagLower = tag.toLowerCase();
+    if (!idea.tags.some(t => t.toLowerCase() === tagLower)) {
+      idea.tags.push(tag);
+      await this.updateIdea(idea);
+      await this.updateTagVocabulary();
+    }
+  }
+
+  async removeTagFromIdea(ideaId, tag) {
+    const idea = this.ideas.find(i => i.id === ideaId);
+    if (!idea) return;
+
+    const tagLower = tag.toLowerCase();
+    idea.tags = idea.tags.filter(t => t.toLowerCase() !== tagLower);
+    await this.updateIdea(idea);
+    await this.updateTagVocabulary();
+  }
+
+  async initSearchService() {
+    if (!this.settings.aiApiKey) {
+      console.log('AI API key not configured, semantic search disabled');
+      return;
+    }
+
+    try {
+      const { createSearchService } = await import('../services/search_service.js');
+      const aiService = await this.getAIService();
+      this.searchService = createSearchService(aiService);
+      console.log('Search service initialized');
+    } catch (error) {
+      console.error('Failed to initialize search service:', error);
+    }
+  }
+
+  async performSearch(query) {
+    this.searchQuery = query;
+    
+    if (!query || query.trim().length < 2) {
+      this.searchResults = [];
+      this.notify();
+      return;
+    }
+
+    if (this.searchService) {
+      try {
+        this.searchResults = await this.searchService.search(
+          query,
+          this.ideas,
+          this.searchOptions
+        );
+      } catch (error) {
+        console.error('Search error:', error);
+        this.searchResults = this.searchService.keywordSearch(query, this.ideas);
+      }
+    } else {
+      const { createSearchService } = await import('../services/search_service.js');
+      const tempSearchService = createSearchService(null);
+      this.searchResults = tempSearchService.keywordSearch(query, this.ideas);
+    }
+
+    this.notify();
+  }
+
+  setSearchOptions(options) {
+    this.searchOptions = { ...this.searchOptions, ...options };
+    if (this.searchQuery) {
+      this.performSearch(this.searchQuery);
+    }
+  }
+
+  clearSearchResults() {
+    this.searchQuery = '';
+    this.searchResults = [];
+    this.notify();
   }
 }
 
