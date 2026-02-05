@@ -25,8 +25,6 @@ initApp().catch(error => {
 function setupEventListeners() {
   const createIdeaBtn = document.getElementById('create-idea-btn');
   const aiImportBtn = document.getElementById('ai-import-btn');
-  const quickAddInput = document.getElementById('quick-add-input');
-  const quickAddBtn = document.getElementById('quick-add-btn');
   const exportBtn = document.getElementById('export-btn');
   const importBtn = document.getElementById('import-btn');
   const settingsBtn = document.getElementById('settings-btn');
@@ -42,23 +40,6 @@ function setupEventListeners() {
   if (aiImportBtn) {
     aiImportBtn.addEventListener('click', () => {
       showAIImportDialog(appState);
-    });
-  }
-
-  if (quickAddInput && quickAddBtn) {
-    const handleQuickAdd = async () => {
-      const title = quickAddInput.value.trim();
-      if (title) {
-        await appState.createIdea({ title });
-        quickAddInput.value = '';
-      }
-    };
-
-    quickAddBtn.addEventListener('click', handleQuickAdd);
-    quickAddInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        handleQuickAdd();
-      }
     });
   }
 
