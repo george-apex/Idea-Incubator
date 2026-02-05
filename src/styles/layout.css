@@ -363,7 +363,7 @@ button.panel-tab.active {
 .floating-actions {
   position: fixed;
   bottom: 24px;
-  left: 186px;
+  right: 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
