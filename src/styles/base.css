@@ -328,6 +328,29 @@ button:disabled {
   opacity: 1;
 }
 
+.connection-line.parent-child {
+  stroke: #8b7355;
+  stroke-width: 3;
+  stroke-dasharray: none;
+}
+
+.connection-line.peer {
+  stroke: #d4a574;
+  stroke-width: 2;
+  stroke-dasharray: 5,5;
+}
+
+.connection-line:hover {
+  stroke-width: 3;
+  stroke: #c4946a;
+}
+
+.connection-line.selected {
+  stroke: var(--color-accent-blue);
+  stroke-width: 4;
+  stroke-dasharray: none;
+}
+
 .link-source {
   outline: 3px dashed var(--color-accent-blue);
   outline-offset: 4px;
@@ -884,8 +907,8 @@ body.glassy-mode button.active {
 
 .minimap {
   position: absolute;
-  bottom: 60px;
-  right: 16px;
+  bottom: 24px;
+  left: 24px;
   width: 150px;
   height: 100px;
   background: rgba(255, 255, 255, 0.9);
@@ -945,6 +968,11 @@ body.glassy-mode button.active {
   padding: 4px 0;
   font-size: 13px;
   color: var(--color-text-primary);
+}
+
+.legend-item strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
 }
 
 .legend-divider {
